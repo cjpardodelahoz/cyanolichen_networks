@@ -323,7 +323,7 @@ if(params.multiqc){
      cluster_id=cluster_log.baseName
      """
      head -n\$(( $count*4 )) $reads > subset.fastq
-     canu -correct -p corrected_reads -nanopore-raw subset.fastq genomeSize=${params.avg_amplicon_size} stopOnLowCoverage=1 minInputCoverage=2 minReadLength=500 minOverlapLength=200
+     canu -correct -p corrected_reads -nanopore-raw subset.fastq genomeSize=${params.avg_amplicon_size} stopOnLowCoverage=1 minInputCoverage=2 minReadLength=500 minOverlapLength=200 gridOptions="--partition=scavenger"
      while [ ! -f corrected_reads.correctedReads.fasta.gz ] ; do sleep 1 ; done
      gunzip corrected_reads.correctedReads.fasta.gz
      READ_COUNT=\$(( \$(awk '{print \$1/2}' <(wc -l corrected_reads.correctedReads.fasta)) ))
@@ -403,7 +403,7 @@ if(params.multiqc){
         racon_warnings.add("""Sample $barcode : Racon correction for cluster $cluster_id failed due to not enough overlaps. Taking draft read as consensus""")
      }
      """
-     if medaka_consensus -i $corrected_reads -d $draft -o consensus_medaka.fasta -t 4 -m r941_min_high_g303 ; then
+     if medaka_consensus -i $corrected_reads -d $draft -o consensus_medaka.fasta -t 4 -m r1041_e82_400bps_hac_v4.2.0 ; then
         echo "Command succeeded"
      else
         cat $draft > consensus_medaka.fasta
