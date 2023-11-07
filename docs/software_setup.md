@@ -36,6 +36,8 @@ mamba env create -f scripts/software/nanoclust/nanoclust_env.yml
 
 The only dependencies that are not part of the environment are Java > v8 and BLAST, which I used from modules in my HPC because the conda environments are buggy. 
 
+### Main pipeline
+
 Now you can download the NanoCLUST pipeline code and the 16S database for the blast searches:
 
 ```sh
@@ -46,6 +48,7 @@ wget https://ftp.ncbi.nlm.nih.gov/blast/db/taxdb.tar.gz && tar -xzvf taxdb.tar.g
 ```
 
 I made some slight modifications to the `main.nf` file, which has the main code for the pipeline. First, I added a command for the pipeline to pause during the canu error correction until the corrected reads are generated:
+
 ```sh
 while [ ! -f corrected_reads.correctedReads.fasta.gz ] ; do sleep 1 ; done
 ```
@@ -55,10 +58,11 @@ This solved an issue that was arising because it tried to find the reads for the
 With these modifications (except the medaka error model), I ran the NanoCLUST dataset succesfully:
 
 ```sh
+cd NanoCLUST
+cp scripts/software/nanoclust/main.nf . # replace the main.nf file
 module load Java/11.0.8 # Requires Java >8
 module load NCBI-BLAST/2.12.0-rhel8
 conda activate nanoclust
-cd NanoCLUST
 ../nextflow_22.10.6/nextflow run main.nf -profile test,conda
 cd ../
 ```
