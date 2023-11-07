@@ -4,35 +4,6 @@ This document contains instructions to install the required software used for th
 
 ### Conda environments
 
-- **Decona**
-
-Decona is a program to polish nanopore amplicon sequences and perform variant calling
-
-```sh
-# Dowloadn the release version and extract it
-wget https://github.com/Saskia-Oosterbroek/decona/archive/refs/tags/v1.3.1.tar.gz
-tar -xvf v1.3.1.tar.gz
-# It seems there is an issue with he install script that comes with the release, so the author advised to replace it by the one in the repo
-git clone https://github.com/Saskia-Oosterbroek/decona.git
-cp decona/install/install.sh decona-1.3.1/install/install.sh
-# Run the install script. This gave an error related to the environment name
-./decona-1.3.1/install/install.sh
-# So I ran the lines starting at 141 from the install script replacing the paths
-# This creates the decona env from the yml and links some dependencies to the conda evn bin folder
-mamba env create -f decona-1.3.1/install/decona.yml -n decona
-ln -s /hpc/group/bio1/carlos/apps/decona-1.3.1/decona /hpc/home/cjp47/miniconda3/envs/decona/bin
-ln -s /hpc/group/bio1/carlos/apps/decona-1.3.1/external/cdhit/cd-hit-est /hpc/home/cjp47/miniconda3/envs/decona/bin
-ln -s /hpc/group/bio1/carlos/apps/decona-1.3.1/external/cdhit/plot_len1.pl /hpc/home/cjp47/miniconda3/envs/decona/bin
-ln -s /hpc/group/bio1/carlos/apps/decona-1.3.1/external/cdhit/make_multi_seq.pl /hpc/home/cjp47/miniconda3/envs/decona/bin
-# Had to update the numpy library and install bcftools for Medaka
-conda install -n decona -c conda-forge numpy=1.20.3
-wget https://github.com/samtools/bcftools/releases/download/1.18/bcftools-1.18.tar.bz2
-tar -xjvf bcftools-1.18.tar.bz2
-cd bcftools-1.18/
-mkdir bin
-/hpc/group/bio1/carlos/apps/bcftools-1.18
-#
-```
 - **Kraken2 and allies**
 
 ```
