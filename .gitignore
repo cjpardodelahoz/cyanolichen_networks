@@ -1,7 +1,10 @@
 .DS_Store
 .Rhistory
 .Rproj.user/
+.Rprofile
 data/
+analyses/
 documents/
 nostoc_communities.Rproj
 pre_fieldwork/
+renv/
