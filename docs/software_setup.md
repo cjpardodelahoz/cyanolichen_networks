@@ -2,7 +2,54 @@
 
 This document contains instructions to install the required software used for the study.
 
+## NanoPlot and MultiQC
+
+```sh
+mamba create -n multiqc -c bioconda -c conda-forge multiqc
+mamba create -n nanoplot -c bioconda nanoplot
+```
+
+## R environment and packages
+
+### Use renv to automatically install all dependencies.
+
+I used the [*renv*](https://rstudio.github.io/renv/reference/restore.html) R package to keep track of the dependencies I used. This generes a lock file that contains the versions of all packages used in the project and you can use it to automatically install them. I worked on R version 4.2.2. You can install renv by doing:
+
+```R
+install.packages("renv")
+```
+
+The lockfile (`renv.lock`) is in the home of this repo. You can install the packages by doing:
+
+```R
+renv::restore(lockfile = "renv.lock")
+```
+
+### List of package versions I installed
+
+- Tidyverse 1.3.2
+- spgs 1.0-4
+
+## Demultiplex
+
+```sh
+mamba create -n demultiplex python=3.9
+git clone https://github.com/jfjlaros/demultiplex
+cd demultiplex
+pip install .
+```
+
+## Cutadapt
+
+[Cutadapt](https://cutadapt.readthedocs.io/en/stable/) finds and removes adapter sequences, primers, poly-A tails and other types of unwanted sequence from your high-throughput sequencing reads.
+
+```sh
+mamba create -n cutadapt -c bioconda -c defaults -c conda-forge cutadapt=4.5
+```
+
 ## **Kraken2 and allies**
+
+Kraken is a program for k-mer based taxonomic assignation of metagenomic and 16S amplicon reads
 
 ```
 # Install kraken2 with conda
@@ -11,7 +58,12 @@ mamba create -n kraken2 -c conda-forge -c bioconda kraken2 krakentools bracken
 greengenes_db_path=/hpc/group/bio1/carlos/apps/kraken2/greengenes/greengenes
 # Build 16S database
 kraken2-build --db /hpc/group/bio1/carlos/apps/kraken2/greengenes/greengenes --special greengenes
+bracken-build -d /hpc/group/bio1/carlos/apps/kraken2/greengenes/greengenes -t 8 -k 35 -l 1500
 ```
+
+## SeqKit, FASTX
+
+SeqKit and FASTX are toolkits for FASTA/Q manipulation. I am using SeqKit v2.2.0 and FASTX v0.0.13. You can download the executable binaries from https://github.com/shenwei356/seqkit/releases/tag/v2.2.0 and http://hannonlab.cshl.edu/fastx_toolkit/fastx_toolkit_0.0.13_binaries_Linux_2.6_amd64.tar.bz2.
 
 ## **NanoCLUST**
 
