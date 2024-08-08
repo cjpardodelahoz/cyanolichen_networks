@@ -2,7 +2,7 @@
 
 # Load required packages
 library(tidyverse)
-#
+
 # Function to insert row to a dataframe
 insert_row <- function(data, new_row, r_index) {
   data_new <- rbind(data[1:r_index-1, ],            
@@ -32,6 +32,9 @@ gap_metadata <- read_csv("data/tables/gap_metadata.csv")
 nxtpelt_metadata <- read_csv("data/tables/nxtpelt_metadata.csv") %>%
   mutate(moss = 
            as.character(moss))
+# Make a vector with integers every 24 starting at 24 until 744
+neg_rows_top <- seq(24, 768, 24)
+neg_indices_top <- seq(6, 37)
 # Add unique code identifiers for each DNA sample
 env_dna_codes_top <- gap_metadata %>%
   select(!c("gap_distance")) %>% 
@@ -44,7 +47,9 @@ env_dna_codes_top <- gap_metadata %>%
   group_by(site) %>%
   mutate(site_n_samples = n()) %>%
   mutate(dna_code = 
-           paste(site, "_", seq(1:site_n_samples[1]), "t", sep = ""))
+           paste(site, "_", seq(1:site_n_samples[1]), "t", sep = "")) %>%
+  select(colnames(nxtpelt_metadata), dna_code) %>%
+  insert_negs(neg_rows = neg_rows_top, neg_indices = neg_indices_top) # Add negative controls
 env_dna_codes_bott <- gap_metadata %>%
   select(!c("gap_distance")) %>% 
   bind_rows(nxtpelt_metadata) %>%
@@ -78,4 +83,38 @@ env_dna_codes_trial <- env_dna_codes_all %>%
 dir.create("documents/tables", recursive = T)
 write_csv(env_dna_codes_trial, "documents/tables/env_dna_codes_trial.csv")
 write_csv(env_dna_codes_top, "documents/tables/env_dna_codes_top.csv")
-  
+
+# Barcode assignments for PacBio sequencing
+
+# Generate table with barcode combinations
+plate_col <- LETTERS[seq(1,8)]
+plate_row <- seq(1,12)
+plate_layout <- crossing(plate_col, plate_row) %>%
+    arrange(plate_row) %>%
+    mutate(plate_well = paste(plate_col, plate_row, sep = ""))
+barcode_df <- bind_rows(plate_layout, plate_layout, plate_layout, plate_layout) %>%
+    add_column(plate_id = rep(c("p1", "p2", "p3", "p4"), each = 96)) %>%
+    arrange(plate_row) %>%
+    add_column(rev_barcode_id = rep(paste("Kinnex16S_Rev_", seq(13,44,1), sep = ""), 12)) %>%
+    arrange(plate_col, plate_id) %>%
+    add_column(fwd_barcode_id = rep(paste("Kinnex16S_Fwd_", sprintf("%02d", seq(1:12)), sep = ""), 32)) %>%
+    group_by(plate_id, plate_row) %>%
+    arrange(desc(plate_col), .by_group = T)
+
+# Vector with dna codes from first batch of 384 envs samples
+env_dna_codes_first_batch <- c(env_dna_codes_top$dna_code[1:96],      # env1
+                                env_dna_codes_top$dna_code[97:144],   # This breakdown accounts for the env2 mistake I made
+                                env_dna_codes_top$dna_code[169:192],
+                                env_dna_codes_top$dna_code[145:168],
+                                env_dna_codes_top$dna_code[193:288],  # env3
+                                env_dna_codes_top$dna_code[289:384])  # env4
+# Add dna codes to barcode table
+first_batch_barcoded <- barcode_df %>%
+    add_column(dna_code = env_dna_codes_first_batch)
+# Save barcode assignments for Graham 
+first_batch_barcoded %>%
+  ungroup() %>%
+  mutate(Barcode = paste(fwd_barcode_id, rev_barcode_id, sep = "--"),
+          Sample = dna_code) %>%
+  select(Barcode, Sample) %>%
+  write_csv("documents/tables/revio_order_10070_barcode.csv")
