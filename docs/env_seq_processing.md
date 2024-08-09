@@ -1,69 +1,28 @@
-# Environmental sequencing trial with 16S and ONT reads
+# Sequencing of 16S from *Peltigera* environmental substrates
 
-## Read QC, demultiplexing and trimming of primers and barcodes
+## Read sorting
 
-Make a working copy and concatenate the reads:
+The PacBio reads are already demultiplexed in the raw data, so we just need to sort and label them by sample:
 
 ```sh
-sbatch scripts/environmental_sequencing/ont_trial/cat_reads.sh
+sbatch scripts/environmental_sequencing/pacbio_env/sort_and_label_reads_batch1.sh
 ```
 
-Get QC report for ONT reads:
+Now we will get QC reports from FastQC and nanoplot and summarize them with MultiQC
 
 ```sh
-conda activate nanoplot
-mkdir -p analyses/environmental_sequencing/ont_trial/qc
-NanoPlot --fastq analyses/reads/ont_trial/pool1_all.fastq \
- --outdir analyses/environmental_sequencing/ont_trial/qc \
- -p pool1_all_nanoplot
-NanoPlot --fastq analyses/reads/ont_trial/pool2_all.fastq \
- --outdir analyses/environmental_sequencing/ont_trial/qc \
- -p pool2_all_nanoplot
-```
-
-Prepare the barcode files for demultiplexing the ONT reads by environmental sample:
-
-```sh
-Rscript scripts/environmental_sequencing/ont_trial/sort_barcodes.R
-```
-
-Demultiplex the reads searching separately for the forward and reverse barcodes:
-
-```sh
-mkdir -p analyses/environmental_sequencing/ont_trial/demultiplex/reads
-sbatch scripts/environmental_sequencing/ont_trial/demultiplex_raw.sh
-```
-
-I tested this on one of the read files from pool1 which was 107 MB in size. When I used the barcode combinations that included the sequence of the 16S primer, there were about 90Mb (85%) of unbinned reads. When I removed the 16S primers from the barcode combinations, there were 74 MB (70%) of unbinned reads. When demultiplexed using only the barcodes (without primers) and searching separately for the forward and reverse barcodes, only 25 MB (24%) of the reads were unbinned.
-
-Now, we will concatenate the reads from the forward and reverse searches in a sample-wise manner:
-
-```sh
-for sample in $(cat misc_files/environmental_sequencing/ont_trial/pool1_samples.txt) ; do
- cat analyses/environmental_sequencing/ont_trial/demultiplex/reads/*${sample}_f.fastq \
-  analyses/environmental_sequencing/ont_trial/demultiplex/reads/*${sample}_r.fastq > \
-  analyses/environmental_sequencing/ont_trial/demultiplex/reads/${sample}_barcoded.fastq
-done
-for sample in $(cat misc_files/environmental_sequencing/ont_trial/pool2_samples.txt) ; do
- cat analyses/environmental_sequencing/ont_trial/demultiplex/reads/*${sample}_f.fastq \
-  analyses/environmental_sequencing/ont_trial/demultiplex/reads/*${sample}_r.fastq > \
-  analyses/environmental_sequencing/ont_trial/demultiplex/reads/${sample}_barcoded.fastq
-done
-```
-
-Next, we will trim the adapter and 16S primers from the demultiplexed reads using cutadapt. We will also filter them by length so that we keep only the full length 16S sequences. There are some samples for which we had amplified a fragment of the 16S using cyanobacteria-specific primers to make sure we didn't have false negatives. However, a preliminary Kraken run showed that there is Nostocales reads in virtually all samples, so the 16S fragment is not useful anymore. This step will also put all reads in the same orientation and remove any cases where there is a mismatch between the barcodes on the 5' and 3' end. 
-
-```sh
-sbatch scripts/environmental_sequencing/ont_trial/trim_primers_and_barcodes.sh
-```
-
-We can now remove the output from demultiplex where forward and reverse reads are in separate files as well as the barcoded reads.
-
-```sh
-rm analyses/environmental_sequencing/ont_trial/demultiplex/reads/*_f.fastq
-rm analyses/environmental_sequencing/ont_trial/demultiplex/reads/*_r.fastq
-rm analyses/environmental_sequencing/ont_trial/demultiplex/reads/*UNKNOWN*
-rm analyses/environmental_sequencing/ont_trial/demultiplex/reads/*barcoded.fastq
+# Output directories
+mkdir -p analyses/environmental_sequencing/pacbio_env/qc/fastqc
+mkdir -p analyses/environmental_sequencing/pacbio_env/qc/nanoplot
+mkdir -p analyses/environmental_sequencing/pacbio_env/qc/multiqc
+# QC reports
+sbatch scripts/environmental_sequencing/pacbio_env/fastqc_batch1.sh
+sbatch scripts/environmental_sequencing/pacbio_env/nanoplot_batch1.sh
+# Summarize
+conda activate multiqc
+multiqc analyses/environmental_sequencing/pacbio_env/qc/fastqc \
+ analyses/environmental_sequencing/pacbio_env/qc/nanoplot \
+ --outdir analyses/environmental_sequencing/pacbio_env/qc/multiqc
 ```
 
 ## Extracting Nostocales reads
