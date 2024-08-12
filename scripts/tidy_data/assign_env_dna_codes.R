@@ -1,6 +1,8 @@
 #!/usr/bin/env Rscript
 
-# Load required packages
+# Required packages and custom functions
+
+# Tidy
 library(tidyverse)
 
 # Function to insert row to a dataframe
@@ -10,6 +12,7 @@ insert_row <- function(data, new_row, r_index) {
                     data[- (1:r_index-1), ])        
   data_new
 }
+
 # Function to insert row with negative controls
 insert_negs <- function(data, neg_rows, neg_indices) {
   n_rows <- length(neg_rows)
@@ -27,14 +30,16 @@ insert_negs <- function(data, neg_rows, neg_indices) {
   new_df
 }
 
+# Assign DNA codes to environmental samples
+
 # Load gap and nxtpelt metadata
 gap_metadata <- read_csv("data/tables/gap_metadata.csv")
 nxtpelt_metadata <- read_csv("data/tables/nxtpelt_metadata.csv") %>%
   mutate(moss = 
            as.character(moss))
-# Make a vector with integers every 24 starting at 24 until 744
-neg_rows_top <- seq(24, 768, 24)
-neg_indices_top <- seq(6, 37)
+# Make a vector with integers every 24 starting at 24 until 768
+neg_rows_top <- c(seq(24, 768, 24), 781)
+neg_indices_top <- seq(6, 38)
 # Add unique code identifiers for each DNA sample
 env_dna_codes_top <- gap_metadata %>%
   select(!c("gap_distance")) %>% 
@@ -49,7 +54,10 @@ env_dna_codes_top <- gap_metadata %>%
   mutate(dna_code = 
            paste(site, "_", seq(1:site_n_samples[1]), "t", sep = "")) %>%
   select(colnames(nxtpelt_metadata), dna_code) %>%
-  insert_negs(neg_rows = neg_rows_top, neg_indices = neg_indices_top) # Add negative controls
+  insert_negs(neg_rows = neg_rows_top, neg_indices = neg_indices_top) %>% # Add negative controls
+  mutate(extraction_batch = ifelse(grepl("^neg", dna_code), dna_code, NA)) %>%
+  ungroup() %>%
+  fill(extraction_batch, .direction = "up")
 env_dna_codes_bott <- gap_metadata %>%
   select(!c("gap_distance")) %>% 
   bind_rows(nxtpelt_metadata) %>%
@@ -62,10 +70,12 @@ env_dna_codes_bott <- gap_metadata %>%
   mutate(site_n_samples = n()) %>%
   mutate(dna_code = 
            paste(site, "_", seq(1:site_n_samples[1]), "b", sep = ""))
-env_dna_codes_all <- bind_rows(env_dna_codes_top, env_dna_codes_bott) %>%
+
+
+# Get table with sample and dna codes for env samples included in trial
+env_dna_codes_all <- bind_rows(select(env_dna_codes_top, -extraction_batch), env_dna_codes_bott) %>%
   group_by(site, plot, quadrant) %>%
   arrange(.by_group = T)
-# Get table with sample and dna codes for env samples included in trial
 trial_sites <- c("s8", "s10", "s12", "s13", "s15")
 env_bench_codes <- paste(rep(c("c", "e", "m", "n"), each = 3), seq(1:3), "_top",
                          sep = "")
@@ -99,7 +109,8 @@ barcode_df <- bind_rows(plate_layout, plate_layout, plate_layout, plate_layout) 
     arrange(plate_col, plate_id) %>%
     add_column(fwd_barcode_id = rep(paste("Kinnex16S_Fwd_", sprintf("%02d", seq(1:12)), sep = ""), 32)) %>%
     group_by(plate_id, plate_row) %>%
-    arrange(desc(plate_col), .by_group = T)
+    arrange(desc(plate_col), .by_group = T) %>%
+    ungroup()
 
 # Vector with dna codes from first batch of 384 envs samples
 env_dna_codes_first_batch <- c(env_dna_codes_top$dna_code[1:96],      # env1
@@ -111,10 +122,20 @@ env_dna_codes_first_batch <- c(env_dna_codes_top$dna_code[1:96],      # env1
 # Add dna codes to barcode table
 first_batch_barcoded <- barcode_df %>%
     add_column(dna_code = env_dna_codes_first_batch)
-# Save barcode assignments for Graham 
+# Save barcode assignments for demultiplexing
 first_batch_barcoded %>%
-  ungroup() %>%
   mutate(Barcode = paste(fwd_barcode_id, rev_barcode_id, sep = "--"),
           Sample = dna_code) %>%
   select(Barcode, Sample) %>%
   write_csv("documents/tables/revio_order_10070_barcode.csv")
+
+# Join all metadata for top env samples
+
+# Compile barcode data from all batches
+all_batches_barcoded <- bind_rows(first_batch_barcoded, .id = "sequencing_batch") %>%
+  select(-c(plate_col, plate_row))
+# Join sequencing and env metadata
+env_top_metadata <- env_dna_codes_top %>%
+  left_join(all_batches_barcoded, by = "dna_code")
+# Save metadata for top env samples
+write_csv(env_top_metadata, "documents/tables/env_top_metadata.csv")
