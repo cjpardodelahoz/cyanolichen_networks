@@ -112,22 +112,35 @@ barcode_df <- bind_rows(plate_layout, plate_layout, plate_layout, plate_layout) 
     arrange(desc(plate_col), .by_group = T) %>%
     ungroup()
 
-# Vector with dna codes from first batch of 384 envs samples
+# Vectors with dna codes from first batch of 384 envs samples
 env_dna_codes_first_batch <- c(env_dna_codes_top$dna_code[1:96],      # env1
                                 env_dna_codes_top$dna_code[97:144],   # This breakdown accounts for the env2 mistake I made
                                 env_dna_codes_top$dna_code[169:192],
                                 env_dna_codes_top$dna_code[145:168],
                                 env_dna_codes_top$dna_code[193:288],  # env3
                                 env_dna_codes_top$dna_code[289:384])  # env4
-# Add dna codes to barcode table
+# Vector with dna codes from second batch of 384 envs samples
+env_dna_codes_second_batch <- c(env_dna_codes_top$dna_code[385:480],  # env5
+                                env_dna_codes_top$dna_code[481:576],   # env6
+                                env_dna_codes_top$dna_code[577:672],  # env7
+                                env_dna_codes_top$dna_code[673:768])  # env8
+
+# Add dna codes to barcode tables
 first_batch_barcoded <- barcode_df %>%
     add_column(dna_code = env_dna_codes_first_batch)
+second_batch_barcoded <- barcode_df %>%
+    add_column(dna_code = env_dna_codes_second_batch)
 # Save barcode assignments for demultiplexing
 first_batch_barcoded %>%
   mutate(Barcode = paste(fwd_barcode_id, rev_barcode_id, sep = "--"),
           Sample = dna_code) %>%
   select(Barcode, Sample) %>%
   write_csv("documents/tables/revio_order_10070_barcode.csv")
+second_batch_barcoded %>%
+  mutate(Barcode = paste(fwd_barcode_id, rev_barcode_id, sep = "--"),
+          Sample = dna_code) %>%
+  select(Barcode, Sample) %>%
+  write_csv("documents/tables/revio_order_10413_barcode.csv")
 
 # Join all metadata for top env samples
 

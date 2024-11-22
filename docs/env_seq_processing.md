@@ -1,12 +1,15 @@
 # Sequencing of 16S from *Peltigera* environmental substrates
 
-## Read sorting
+## Read sorting and QC reports
 
 The PacBio reads are already demultiplexed in the raw data, so we just need to sort and label them by sample:
-
 ```sh
 sbatch scripts/environmental_sequencing/pacbio_env/sort_and_label_reads_batch1.sh
+sbatch scripts/environmental_sequencing/pacbio_env/sort_and_label_reads_batch2.sh
+sbatch scripts/environmental_sequencing/pacbio_env/sort_and_label_reads_batch3.sh
 ```
+***Note***: batch3 includes (i) the 16S libraries from 308 *Peltigera* specimens that represent the diversity of *Nostoc* we found with *rbcLX* sequences, and (ii) the 16S libraries from 13 env samples.
+
 
 Now we will get QC reports from FastQC and nanoplot and summarize them with MultiQC
 
@@ -17,137 +20,46 @@ mkdir -p analyses/environmental_sequencing/pacbio_env/qc/nanoplot
 mkdir -p analyses/environmental_sequencing/pacbio_env/qc/multiqc
 # QC reports
 sbatch scripts/environmental_sequencing/pacbio_env/fastqc_batch1.sh
+sbatch scripts/environmental_sequencing/pacbio_env/fastqc_batch2.sh
+sbatch scripts/environmental_sequencing/pacbio_env/fastqc_batch3.sh
 sbatch scripts/environmental_sequencing/pacbio_env/nanoplot_batch1.sh
+sbatch scripts/environmental_sequencing/pacbio_env/nanoplot_batch2.sh
+sbatch scripts/environmental_sequencing/pacbio_env/nanoplot_batch3.sh
 # Summarize
 conda activate multiqc
 multiqc analyses/environmental_sequencing/pacbio_env/qc/fastqc \
  analyses/environmental_sequencing/pacbio_env/qc/nanoplot \
  --outdir analyses/environmental_sequencing/pacbio_env/qc/multiqc
 ```
+***Notes***: 
+- FastQC failed on samples s1_3t, s10_23t, and s1_12t.
+- NanoPlot failed on samples
+
+## Read filtering and denoising to get ASVs
+
+Trim the primers, orient the reads forward and add the sample names to the sequence headers:
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/trim_orient_relabel_batch1.sh
+sbatch scripts/environmental_sequencing/pacbio_env/trim_orient_relabel_batch2.sh
+sbatch scripts/environmental_sequencing/pacbio_env/trim_orient_relabel_batch3.sh
+```
+Call ASVs using UNOISE3 implemente in Vsearch:
+
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/unoise_asv_call.sh
+```
 
 ## Extracting Nostocales reads
 
-We are now going to do taxonomic assignation on the trimmed demultiplexed reads using Kraken and the greengenes database. The script will run both Kraken and Bracken and convert the report mpa format in case we need it later on.
-
 ```sh
-# File with list of samples
-cat misc_files/environmental_sequencing/ont_trial/pool*_samples.txt > \
- misc_files/environmental_sequencing/ont_trial/all_trial_samples.txt
-# Run Kraken2/bracken
-sbatch scripts/environmental_sequencing/ont_trial/kraken_greengenes.sh
-
-ls *.mpa > mpa_list.txt
-bracken_mpa_path=$(cat mpa_list.txt)
-combine_mpa.py -i ${bracken_mpa_path} -o combined_mpa.txt
+sbatch scripts/environmental_sequencing/pacbio_env/kraken_pipeline_unoise.sh
+sbatch scripts/environmental_sequencing/pacbio_env/kraken_pipeline_unoise_batch123.sh
 ```
 
-After the trimming, samples s13_14b, s8_17b, neg1 and neg3 had too few reads for the Bracken classification, so we will exclude them from the upcoming analyses. These are array indices 17, 24, 80 and 90.
-
-We are now going to use the Kraken2 classficication to extract the reads classified as Nostocales.
+## All-to-all BLASTn of Nostocales ASVs
 
 ```sh
-sbatch scripts/environmental_sequencing/ont_trial/extract_nostocales_reads.sh
-```
-
-This will print them in both fasta and fastq format. Also, the following samples didn't have any reads classified as Nostocales after trimming:
-
--s8_11t
--s8_12t
--s8_17t
--s8_11b
--s8_12b
--s8_16b
--neg2
--s13_8b
--s15_8t
--s15_11t
--neg4
--neg5
-
-We will exclude them from the subsequent analyses (sample indices 1,2,7,11,12,16,48,84,93,96,104 and 105).
-
-## Pooling Nostocales reads for error correction
-
-We are going to pool the nostocales reads in three different ways:
-
--ALL nostocales reads from ALL 5 sites.
--Separately pooling reads from each site.
--Separately by site and layer (i.e., top vs bottom)
-
-We first will get a list of the sites included in the trial. This will exclude the reads from 12 benchmark samples and the 5 negative controls because they didn't have nostocales reads after trimming (see above).
-
-```sh
-cat misc_files/environmental_sequencing/ont_trial/all_trial_samples.txt | head -n 105 | sed "s|_.*||" | sort | uniq | tail -n 5 > misc_files/environmental_sequencing/ont_trial/trial_sites.txt
-```
-
-Now, let's concatenate the nostocales reads by site:
-
-```sh
-# Varaibles with paths
-kraken_out_path="analyses/environmental_sequencing/ont_trial/kraken/greengenes"
-reads_out_path="analyses/environmental_sequencing/ont_trial/nanoclust/nostocales/reads"
-sample_list="misc_files/environmental_sequencing/ont_trial/trial_samples_with_nostocales.txt"
-site_list="misc_files/environmental_sequencing/ont_trial/trial_sites.txt"
-# Directory for pooled reads
-mkdir -p ${reads_out_path}
-# Copy of nostocales reads
-for sample in $(cat ${sample_list}) ; do
- cp ${kraken_out_path}/${sample}/${sample}_nostocales.fastq \
-  ${reads_out_path}/${sample}_nostocales.fastq
-done
-# Pool ALL samples
-cat ${reads_out_path}/s*_*_nostocales.fastq > ${reads_out_path}/all_nostocales.fastq
-# Pool by site
-for site in $(cat ${site_list}) ; do
- cat ${reads_out_path}/${site}_*_nostocales.fastq > \
-  ${reads_out_path}/${site}_nostocales.fastq
-done
-# Pool by site and layer
-for site in $(cat ${site_list}) ; do
- cat ${reads_out_path}/${site}_*t_nostocales.fastq > \
-  ${reads_out_path}/${site}_t_nostocales.fastq
- cat ${reads_out_path}/${site}_*b_nostocales.fastq > \
-  ${reads_out_path}/${site}_b_nostocales.fastq
-done
-# Print list of layer filenames
-basename -a ${reads_out_path}/s*_*_nostocales.fastq | sed "s|_nostocales.fastq||" > \
- misc_files/environmental_sequencing/ont_trial/site_layer_list.txt
-# Remove copies
-rm ${reads_out_path}/*[0-9]t_nostocales.fastq ${reads_out_path}/*[0-9]b_nostocales.fastq ${reads_out_path}/*top_nostocales.fastq
-```
-
-And now we run NanoCLUST on the pooled nostocales reads:
-
-```sh
-sbatch scripts/environmental_sequencing/ont_trial/nanoclust_nostocales_all.sh
-sbatch scripts/environmental_sequencing/ont_trial/nanoclust_nostocales_by_site.sh
-sbatch scripts/environmental_sequencing/ont_trial/nanoclust_nostocales_by_layer.sh
-```
-
-Several of the pooled runs failed:
-
-In preparation for phylogenetic placement, we are going to pool all the corrected consensus sequences inferred by Nanoclust:
-
-```sh
-# Path to seqkit for relabeling seqs
-seqkit_path="/hpc/group/bio1/carlos/apps"
-# Paths for label manipulation
-consensus_paths="misc_files/environmental_sequencing/ont_trial/nostocales_consensus_paths.txt"
-cluster_prefix="analyses/environmental_sequencing/ont_trial/nanoclust/nostocales/.*pool.*/.*/.*_nostocales/"
-cluster_suffix="/consensus_medaka.fasta/consensus.fasta"
-pool_prefix="analyses/environmental_sequencing/ont_trial/nanoclust/nostocales/.*pool.*/"
-pool_suffix="/cluster.*/consensus_medaka.fasta/consensus.fasta"
-out_seqs_path="analyses/environmental_sequencing/ont_trial/placement/nostocales/sequences"
-# List of paths to consensus sequences
-ls analyses/environmental_sequencing/ont_trial/nanoclust/nostocales/*pool*/*/*_nostocales/cluster*/consensus_medaka.fasta/consensus.fasta > \
- ${consensus_paths}
-# Merge all consensus sequences from Nanoclust and relabel them with the pool and cluster info
-for consensus in $(cat ${consensus_paths}) ; do
- cluster=$(echo ${consensus} | sed "s|${cluster_prefix}||" | sed "s|${cluster_suffix}||")
- pool=$(echo ${consensus} | sed "s|${pool_suffix}||" | sed "s|${pool_prefix}||")
- cat ${consensus} | ${seqkit_path}/seqkit replace -p .+ -r "${pool}_${cluster}" >> \
-  ${out_seqs_path}/all_nostocales_consensus.fasta
-done
+sbatch scripts/environmental_sequencing/pacbio_env/blast_all_to_all_nostocales_batch123.sh
 ```
 
 ## Phylogenetic placement of reads classfified as Nostocales
