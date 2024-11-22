@@ -86,8 +86,7 @@ NanoCLUST is supposed to automatically install dependencies via conda environmen
 mamba env create -f scripts/software/nanoclust/nanoclust_env.yml
 ```
 
-The only dependencies that are not part of the environment are Java > v8 and BLAST, which I used from modules in my HPC because the conda environments are buggy. 
-
+The only dependencies that are not part of the environment are Java > v8 and BLAST, which I used from modules in my HPC because the conda environments are buggy.
 ### Main pipeline
 
 Now you can download the NanoCLUST pipeline code and the 16S database for the blast searches:
@@ -119,7 +118,24 @@ conda activate nanoclust
 cd ../
 ```
 
-- **Demultiplex**
+## **ssUMI**
+
+This is environment has software for polishing nanopore amplicon sequences. I used it for my ITS and rbcLX sequences from lichens but the pipeline is based on the [ssUMI pipeline](https://github.com/ZielsLab/ssUMI/tree/main) by [Xuan et al. (2023)](https://www.biorxiv.org/content/10.1101/2023.06.19.544637v1). The main dependencies are minimap2, Medaka 2, and Racon.
+
+```sh
+mamba env create -f scripts/software/ssumi/ssumi_env.yml
+```
+
+## BLAST
+
+This is BLAST 2.6.1.
+
+```sh
+mamba env create -f scripts/software/blast/blast_env.yml
+```
+
+
+## **Demultiplex**
 
 ```sh
 mamba create -n demultiplex python=3.9
@@ -127,4 +143,18 @@ git clone https://github.com/jfjlaros/demultiplex
 cd demultiplex
 pip install .
 ```
+## VSEARCH
 
+VSEARCH is a software for metagenomic data processing. You can download the precompiled binaries for linux-x86_64: 
+
+```sh
+# Download binary
+wget https://github.com/torognes/vsearch/releases/download/v2.28.1/vsearch-2.28.1-linux-x86_64.tar.gz
+tar xzf vsearch-2.28.1-linux-x86_64.tar.gz
+# Get greengenes database for orientation
+cd vsearch-2.28.1-linux-x86_64/bin
+wget https://gg-sg-web.s3-us-west-2.amazonaws.com/downloads/greengenes_database/gg_12_8/gg_12_8.fasta.gz
+gunzip gg_12_8.fasta.gz
+cat gg_12_8.fasta | ../apps/seqkit sample -n 2000 -o gg_12_8_2000.fasta
+cd ../../
+```
