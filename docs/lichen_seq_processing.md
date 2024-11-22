@@ -92,22 +92,36 @@ rm analyses/lichen_sequencing/ont_lichen/consensus/its_head.csv
 rm analyses/lichen_sequencing/ont_lichen/consensus/rbclx_head.csv
 ```
 
-We collapsed the sequences into haplotypes with vsearch and then did a BLASTn against the ITS and *rbcLX* sequences from Alberta that we published in my paper on Nostoc phylogenomics:
+## Symbiont IDs and Haplotype clustering
+
+We collapsed the consensus sequences into haplotypes with vsearch and then did a BLASTn against the ITS and *rbcLX* sequences from Alberta that we published in my paper on *Nostoc* phylogenomics:
 
 ```sh
 sbatch scripts/lichen_sequencing/ont_lichen/collapse_and_blast_its.sh
 sbatch scripts/lichen_sequencing/ont_lichen/collapse_and_blast_rbclx.sh
 ```
 
-Now we add the IDs to the voucher table for manual curation.
+Then we added the IDs to the voucher table for manual curation.
 
 ```sh
 Rscript scripts/lichen_sequencing/ont_lichen/ids_to_voucher.R
 ```
 
-Manual curation: Mark PA2065-PA2072 (P2073-P2080), and PA1561-PA1568 (PA1569-PA1576) as contaminants (pipetting error). Kept records If they had either >10 reads or if thee same haplotype was found more than once and at least one of the records had >10 reads. ITS ids were based on blast to database of ABMI sequences from Pardo-De la Hoz et al. 2023. rbcLX IDs we based on blast against database of ABMI sequences from Pardo-De la Hoz et al. 2023 and verified with [T-BAS placement on the phylogenomic tree of Nostoc](https://tbas.cifr.ncsu.edu/tbas2_3/genetree.php?runnumber=OS6RU5JN).
+***Manual curation notes***: Mark PA2065-PA2072 (P2073-P2080), and PA1561-PA1568 (PA1569-PA1576) as contaminants (pipetting error). I kept records If they had either >10 reads or if the same haplotype was found more than once and at least one of the records had >10 reads. ITS ids were based on blast to database of ABMI sequences from Pardo-De la Hoz et al. 2023. rbcLX IDs we based on blast against database of ABMI sequences from Pardo-De la Hoz et al. 2023 and verified with [T-BAS placement on the phylogenomic tree of *Nostoc*](https://tbas.cifr.ncsu.edu/tbas2_3/genetree.php?runnumber=OS6RU5JN).
 
-I also noticed that the consensus sequences have tails 0f ~8 bp that don't seem to correspond to biological info. Therefore, I aligned all the consensus sequences and trimmed them manually in Mesquite. After that, I re-did the haplotype collapsing but this time including the sequences from the ABMI sampling (Pardo-De la Hoz et al.) in addition to the ones we sequenced with ONT:
+After ID curation, I noticed that the *rbcLX* consensus sequences have 5' and 3' tails of 8 bp that don't seem to correspond to biological info. Therefore, I aligned all the consensus sequences and trimmed them manually in Mesquite. I also removed obvious sequencing mistakes, i.e., in-frame insertions in coding regions.
+
+I also used ITSx to extract the ITS region (i.e., ITS1, 5.8S, and ITS2) prior to a more refined haplotype collapsing:
+
+```sh
+sbatch scripts/lichen_sequencing/ont_lichen/itsx.sh
+```
+
+After that, I re-did the haplotype collapsing but this time including the sequences from the ABMI sampling (Pardo-De la Hoz et al.) in addition to the ones we sequenced with ONT:
+
+```sh
+sbatch scripts/lichen_sequencing/multiscale/collapse_multiscale_its_rbclx.sh
+```
 
 
 Then I added the revised haplotype information to the curated voucher table:

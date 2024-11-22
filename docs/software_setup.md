@@ -134,7 +134,6 @@ This is BLAST 2.6.1.
 mamba env create -f scripts/software/blast/blast_env.yml
 ```
 
-
 ## **Demultiplex**
 
 ```sh
@@ -157,4 +156,9 @@ wget https://gg-sg-web.s3-us-west-2.amazonaws.com/downloads/greengenes_database/
 gunzip gg_12_8.fasta.gz
 cat gg_12_8.fasta | ../apps/seqkit sample -n 2000 -o gg_12_8_2000.fasta
 cd ../../
+```
+## ITSx
+
+```sh
+mamba env create -f scripts/software/itsx/itsx_env.yml
 ```
