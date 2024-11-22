@@ -34,8 +34,8 @@ ${seqkit_path}/seqkit seq -m 450 ${its_out_path}/its_multiscale.fasta > ${its_ou
 # Collapse ITS sequences into haplotypes and print clustering report
 ${vsearch_path}/vsearch --cluster_fast ${its_out_path}/its_multiscale_filtered.fasta \
     --id 1 \
-    --centroids ${its_out_path}/its_multiscale_haplotyes.fasta \
-    --uc ${its_out_path}/its_multiscale_haplotyes.tsv \
+    --centroids ${its_out_path}/its_multiscale_haplotypes.fasta \
+    --uc ${its_out_path}/its_multiscale_haplotypes.tsv \
     --qmask none \
     --threads 2
 
