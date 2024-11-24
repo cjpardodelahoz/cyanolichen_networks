@@ -104,6 +104,7 @@ sbatch scripts/lichen_sequencing/ont_lichen/collapse_and_blast_rbclx.sh
 Then we added the IDs to the voucher table for manual curation.
 
 ```sh
+# TO-DO: Rerun using updated data s1c
 Rscript scripts/lichen_sequencing/ont_lichen/ids_to_voucher.R
 ```
 
@@ -123,12 +124,4 @@ After that, I re-did the haplotype collapsing but this time including the sequen
 sbatch scripts/lichen_sequencing/multiscale/collapse_multiscale_its_rbclx.sh
 ```
 
-
-Then I added the revised haplotype information to the curated voucher table:
-
-```sh
-Rscript scripts/lichen_sequencing/haplotypes_to_curated_voucher.R
-```
-
-This is the 
-
+***Notes:*** I reran ITSx and removed duplicates of P8337 and P10089 from the ITS ABMI seqs because I realized they are chimeras. This haplotype clustering only considered ITS sequences with > 450 bp and *rbcLX* sequences with > 700 bp
