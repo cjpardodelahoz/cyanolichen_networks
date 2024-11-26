@@ -1,4 +1,4 @@
-# Sequencing of 16S from *Peltigera* environmental substrates
+# Sequencing of 16S from *Peltigera* environmental substrates and selected *Peltigera* specimens
 
 ## Read sorting and QC reports
 
@@ -55,6 +55,31 @@ sbatch scripts/environmental_sequencing/pacbio_env/unoise_asv_call.sh
 sbatch scripts/environmental_sequencing/pacbio_env/kraken_pipeline_unoise.sh
 sbatch scripts/environmental_sequencing/pacbio_env/kraken_pipeline_unoise_batch123.sh
 ```
+
+All-to-all BLASTn of Nostocales ASVs
+
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/blast_all_to_all_nostocales_batch123.sh
+```
+
+BLASTn of Nostocales ASVs to reference dataset of *Nostoc* 16S sequences
+
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/blast_nostoc_ref_batch123.sh
+```
+
+## Curation of 16S from selected *Peltigera* specimens
+
+The goal of the curation was to determine the 16S ASV that corresponded to the *Nostoc* ID determined with *rbcLX*. 
+
+We first summarized the lichen 16S data by getting the top 10 most abundant (i.e., # of mapped reads) nostocalean ASVs in the 308 lichen samples that we sequenced. We also printed a table witht the *Nostoc* IDs that we assigned to those samples based on *rbcLX*:
+
+```sh
+mkdir -p analyses/lichen_sequencing/pacbio_lichen
+Rscript scripts/lichen_sequencing/pacbio_lichen/prep_for_lichen_16s_curation.R
+```
+
+Then, we manually curated the lichen 16S data using (i) the results of the BLASTn seach against the *Nostoc* 16S reference sequences, (ii) the [results of EPA placement of all Nostocales ASVs on the T-BAS tree of *Nostoc*](https://tbas.cifr.ncsu.edu/tbas2_3/genetree.php?runnumber=PLU76GM7), and (iii) the *Nostoc* IDs assigned with *rbcLX*. All libraries had 16S reads that mapped to many Nostocales ASVs. This is expected because the DNA was extracted from specimens that were not surface sterilized. However, with one exception, the most abundant ASV in each sample corresponded to the taxon determined with *rbcLX*. In addition, the top ASV in each library was typically one or two orders of magnitude more abundant than the rest. This suggests that the other mappings correspond to expected epiphytic *Nostoc* or low-level contamination.
 
 ## All-to-all BLASTn of Nostocales ASVs
 
