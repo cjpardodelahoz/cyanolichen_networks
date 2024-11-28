@@ -124,4 +124,4 @@ After that, I re-did the haplotype collapsing but this time including the sequen
 sbatch scripts/lichen_sequencing/multiscale/collapse_multiscale_its_rbclx.sh
 ```
 
-***Notes:*** I reran ITSx and removed duplicates of P8337 and P10089 from the ITS ABMI seqs because I realized they are chimeras. This haplotype clustering only considered ITS sequences with > 450 bp and *rbcLX* sequences with > 700 bp
+***Notes:*** I reran ITSx and removed duplicates of P8337 and P10089 from the ITS ABMI seqs because I realized they are chimeras. I also expanded the ABMI dataset from Pardo-De la Hoz et al. by adding 393 ITS sequences from *Peltigera* and 10 *rbcLX* sequenced of *Nostoc*. The majority of the ITS sequences were generated as part of the previous study but were not published in it because the *Nostoc* sequencing had failed for those specimens. Only a few of the specimens (PA4100s) were sequenced in this study as part of the ONT lichen sequencing. This haplotype clustering only considered ITS sequences with > 450 bp and *rbcLX* sequences with > 700 bp
