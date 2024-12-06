@@ -1,13 +1,21 @@
 # Compute the co-occurrence and the interaction models
-fit_models = function(data, funC, funL, selection) {
+fit_models = function(data, Enames, funC, funL, selection) {
 	
 	if(sum(data$Xij)!=0 ) {
 
 		# MODEL CO-OCCURRENCE
-		modelC = funC(data,selection)
+		if (identical(funC, C2) | identical(funC, C3)) {
+		   modelC = funC(data, Enames, selection)
+		} else {
+		   modelC = funC(data, selection)
+		}
 
 		# MODEL INTERACTIONS
-		modelL = funL(data,selection)
+		if (identical(funL, L2)) {
+		   modelL = funL(data, Enames, selection)
+		} else {
+		   modelL = funL(data, selection)
+		}
 	}
 
 	else {

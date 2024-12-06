@@ -1,6 +1,6 @@
 # Returns the probability of observing the species i independently 
 # of the environment
-C0 <- function(data,selection) {
+C1 <- function(data,selection) {
    with(as.list(data),{
         model = list()
         model$i <- glm(Xi ~ 1, family = "binomial")
@@ -12,7 +12,7 @@ C0 <- function(data,selection) {
 
 # Returns the probability of observing the pair ij independently 
 # of the environment
-C1 <- function(data, selection) {
+C0 <- function(data, selection) {
    with(as.list(data),{
         model = list()    
         model$ij <- glm(Xij ~ 1, family = "binomial")
@@ -23,9 +23,10 @@ C1 <- function(data, selection) {
 
 # Returns the probability of observing the pair ij as a function 
 # of the environment
-C2 <- function(data, selection) {
+C2 <- function(data, Enames, selection) {
    with(as.list(data),{
-      Enames = expression("T","T2","PP","PP2")
+      #Enames = expression("T","T2","PP","PP2")
+      #Enames = c("T","T2","PP","PP2")
       fmla <- as.formula(paste("Xij ~ ", paste(Enames, collapse= "+")))     
       model = list()    
       model$ij <- glm(fmla, family = "binomial", data = E)
@@ -36,11 +37,12 @@ C2 <- function(data, selection) {
 
 # Returns the probability of observing the species i as a function 
 # of the environment
-C3 <- function(data, selection) {
+C3 <- function(data, Enames, selection) {
    with(as.list(data),{
  #     Ei = E[match(unique(data$sites[data$IDi == i]),data$sites[data$IDi == i]),]
  #     Ej = E[match(unique(data$sites[data$IDj == j]),data$sites[data$IDj == j]),]
-      Enames = expression("T","T2","PP","PP2")
+      #Enames = expression("T","T2","PP","PP2")
+      #Enames = c("T","T2","PP","PP2")
       fmlai <- as.formula(paste("Xi ~ ", paste(Enames, collapse= "+")))  
       fmlaj <- as.formula(paste("Xj ~ ", paste(Enames, collapse= "+"))) 
       model = list()

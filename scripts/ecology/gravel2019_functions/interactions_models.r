@@ -28,14 +28,37 @@ L1 <- function(data, selection) {
 
 # Returns the probability of observing the interaction ij when i 
 # and j are present for each level of the environment
-L2 <- function(data, selection) {
-   with(as.list(data),{
-    subLij = Lij[Xij==1] 
-    subE = E[Xij==1,]  
-    Enames = expression("T","T2","PP","PP2")
-    fmla <- as.formula(paste("subLij ~ ", paste(Enames, collapse= "+")))     
-    model <- glm(fmla, family = "binomial",data=subE)
-    if(selection) {return(step(model,trace=0,direction = "forward"))}
-    else {return(model)}
-   })
+L2 <- function(data, Enames, selection) {
+  with(as.list(data), {
+    # Subset data based on the condition Xij == 1
+    subLij <- Lij[Xij == 1]
+    subE <- E[Xij == 1, ]
+    
+    # Remove categorical variables with only one level
+    valid_vars <- Enames[!sapply(Enames, function(var) {
+      if (is.factor(subE[[var]]) || is.character(subE[[var]])) {
+        # Check if categorical and has only one level
+        length(unique(subE[[var]])) <= 1
+      } else {
+        # Not a categorical variable, so keep it
+        FALSE
+      }
+    })]
+    
+    # Update Enames and subE to reflect valid variables only
+    Enames <- valid_vars
+    subE <- subE[, Enames, drop = FALSE]
+    
+    # Create formula for the GLM
+    fmla <- as.formula(paste("subLij ~", paste(Enames, collapse = "+")))
+    
+    # Fit the GLM and apply stepwise selection if specified
+    model <- glm(fmla, family = "binomial", data = subE)
+    if (selection) {
+      return(step(model, trace = 0, direction = "forward"))
+    } else {
+      return(model)
+    }
+  })
 }
+
