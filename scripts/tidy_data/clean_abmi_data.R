@@ -218,5 +218,16 @@ abmi_site_data[abmi_site_data$SiteYear == "ABMI_1521_2016",]$vegetation_type <- 
 #[1] "ABMI_OG-ALPAC-SK-1_2012" "ABMI_OG-ALPAC-SK-2_2012"
 #[3] "ABMI_OG-ALPAC-SK-9_2012"
 
+# How many unique sites are in the ABMI site data?
+#unique(abmi_site_data$Site) %>% length()
+
+# How many sites were sampled more than once?
+#abmi_site_data %>% 
+#    group_by(Site) %>%
+#    filter(n() > 1) %>%
+#    select(Site) %>%
+#    unique() %>%
+#    nrow()
+
 # Save the ABMI site data
 write_csv(abmi_site_data, "data/tables/abmi_site_data.csv")
