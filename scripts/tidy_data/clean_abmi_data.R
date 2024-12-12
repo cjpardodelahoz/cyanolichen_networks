@@ -77,9 +77,16 @@ abmi_id_voucher <- read_csv("data/tables/nostoc_datas1c.csv") %>%
     rename(`DNA ID` = `Dna Id`,
             `ABMI ID` = `Abmi Id`,
             `Mycobiont molecular ID` = `Mycobiont Molecular Id`,
-            `Nostoc OTU` = `Nostoc Otu`) %>%
+            `Nostoc OTU` = `Nostoc Otu`,
+            `Nostoc subclade` = Subclade,
+            `Nostoc section` = Section,
+            `Nostoc spp. complex` = `Species Complex`,
+            `Nostoc phylogroup` = Phylogroup,
+            `Peltigera section` = `Peltigera Section`) %>%
     # Reorder columns
-    select(`DNA ID`, `ABMI ID`, `Mycobiont molecular ID`, `Nostoc OTU`, Subclade, Section, `Species Complex`, Phylogroup, Site, Year, Collector, Reference)
+    select(`DNA ID`, `ABMI ID`, `Mycobiont molecular ID`, `Nostoc OTU`, `Peltigera section`,
+            `Nostoc subclade`, `Nostoc section`, `Nostoc spp. complex`, `Nostoc phylogroup`, 
+            Site, Year, Collector, Reference)
 
 # Save the ABMI ID voucher
 write_csv(abmi_id_voucher, "documents/tables/abmi_id_voucher.csv")
