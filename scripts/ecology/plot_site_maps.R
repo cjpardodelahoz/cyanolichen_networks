@@ -12,6 +12,14 @@ library(readr)
 library(magrittr)
 library(ggnewscale)
 
+# Function to transform coordinates to AB shape file CRS
+transform_crs <- function(lat_long_df) {
+  lat_long_df %>%
+  # Convert to sf data
+  st_as_sf(., coords = c("Long", "Lat"), crs = 4326) %>%
+  # Transform to match CRS of AB shapefile
+  st_transform(., crs = st_crs(ab_nr_shp)) # transforming specifically to the ABM shapefile with natural subregion boundaries removed
+}
 
 ##### BASE AB MAP #####
 
@@ -60,21 +68,53 @@ base_map <- ggplot() +
 
 ##### PLOT ALL AB SITES INCLUDED #####
 
-# Load ABMI site data and transform to reference CRS
+# Load ABMI site data (regional) and transform to reference CRS
 all_abmi_sites <- read_csv("data/tables/abmi_site_data.csv") %>%
   # Remove duplicated sites
   filter(!duplicated(Site)) %>%
   select(Lat, Long) %>%
-  # Convert to sf data
-  st_as_sf(., coords = c("Long", "Lat"), crs = 4326) %>%
-  # Transform to match CRS of AB shapefile
-  st_transform(., crs = st_crs(ab_nr_shp))
+  # Transform crs
+  transform_crs()
+
+# 14 sites from regional also included in local dataset
+local_sites <- c("1116",
+                 "1077",
+                 "1169",
+                 "1293",
+                 "1378",
+                 "1427",
+                 "1529",
+                 "1631",
+                 "1499",
+                 "1307",
+                 "OG-ABMI-1122-1",
+                 "877",
+                 "OG-DH-751-1",
+                 "OG-DH-785-1")
+
+# Get coordinates for local sites
+local_sites_df <- read_csv("data/tables/abmi_site_data.csv") %>%
+  filter(Site %in% local_sites) %>%
+  select(Lat, Long)
+
+# Add coordinates for site 1321, which was not part of regional dataset
+local_sites_df[15,1] <- 52.3611
+local_sites_df[15,2] <- -116.3646
+
+# Trnasform local sites to AB CRS
+local_sites_sf <- transform_crs(local_sites_df)
 
 # Plot all sites
 map_with_all_sites <- base_map +
   # Add points
   geom_sf(data = all_abmi_sites, fill ="white", color = "black", size = 1.5,
+          stroke = 0.2, shape = 21) +
+  geom_sf(data = local_sites_sf, fill = "black", color = "black", size =1.5,
           stroke = 0.2, shape = 21)
+
+# Save the map
+ggsave(map_with_all_sites, filename = "documents/plots/map_with_all_sites.pdf",
+       width = 13, height = 14, units = "cm")
 
 ##### PLOT SITES BY INTERACTION MODULE #####
 
