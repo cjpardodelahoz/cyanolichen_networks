@@ -9,7 +9,7 @@ library(tidyverse)
 # Load ABMI extra dataset
 abmi_extra_data <- read_csv("data/tables/abmi_extra_voucher.csv") %>%
     # Add ABMI_ prefix to the Site column
-    mutate(site = paste0("ABMI_", site),
+    mutate(site = paste0("ABMI ", site),
             abmi_id = as.numeric(abmi_id)) %>%
     # Remove underscores and periods from the mycobiont_molecular_id, subclade, section, and species_complex columns
     mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "_", "")) %>%
