@@ -279,3 +279,6 @@ peltigera_module_assignments <- data.frame(mycobiont_molecular_id = rev(colnames
     module = peltigera_y_partitions)
 nostoc_module_assignments <- data.frame(nostoc_otu = rownames(peltigera_matrix_compound$matrix), 
     module = peltigera_x_partitions)
+
+# Save the tables as RData files
+save(peltigera_module_assignments, nostoc_module_assignments, file = "analyses/ecology/peltigera_module_assignments.RData")

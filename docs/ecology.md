@@ -28,12 +28,14 @@ Rscript scripts/ecology/quantify_regional_network_structure.R
 Now we plot the regional network highlighting compound structure. This will generate two alternatives: one with *Nostoc* in the columns and one with *Nostoc* in the rows.
 
 ```sh
-Escript scripts/ecology/plot_compound_network.R
+Rscript scripts/ecology/plot_compound_network.R
 ```
 
 We used the module assignments from the compound network plot to map the pairs in the map of Alberta:
 
-
+```sh
+Rscript scripts/ecology/plot_site_maps.R
+```
 
 ## Vertical vs. Horizontal transmission
 
