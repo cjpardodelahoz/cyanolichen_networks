@@ -11,6 +11,7 @@ library(dplyr)
 library(readr)
 library(magrittr)
 library(ggnewscale)
+library(stringr)
 
 # Function to transform coordinates to AB shape file CRS
 transform_crs <- function(lat_long_df) {
@@ -115,56 +116,3 @@ map_with_all_sites <- base_map +
 # Save the map
 ggsave(map_with_all_sites, filename = "documents/plots/map_with_all_sites.pdf",
        width = 13, height = 14, units = "cm")
-
-##### PLOT SITES BY INTERACTION MODULE #####
-
-
-
-
-# Category 1 (6 colors)
-c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C")
-
-# Category 2 (11 colors)
-c("#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928", 
-  "#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3")
-
-# Category 3 (6 colors)
-c("#FFED6F", "#D9D9D9", "#BC80BD", "#CCEBC5", "#DECBE4", "#FED9A6")
-
-
-
-# Category 1 (6 colors)
-c("#003F5C", "#58508D", "#BC5090", "#FF6361", "#FFA600", "#5C8001")
-
-# Category 2 (11 colors)
-c("#D73027", "#FC8D59", "#FEE08B", "#91CF60", "#1A9850", "#4575B4", 
-  "#313695", "#A6D96A", "#F46D43", "#FEE08B", "#D53E4F")
-
-# Category 3 (6 colors)
-c("#6A51A3", "#FEC44F", "#FC9272", "#FF9896", "#E41A1C", "#C7E9B4")
-
-
-
-
-# Category 1 (6 colors, earthy greens and blues)
-c("#8C510A", "#BF812D", "#DFC27D", "#80CDC1", "#35978F", "#01665E")
-
-# Category 2 (11 colors, bright rainbow colors)
-c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", 
-  "#A65628", "#F781BF", "#999999", "#66C2A5", "#FC8D62")
-
-# Category 3 (6 colors, muted warm tones)
-c("#FEE0D2", "#FC9272", "#FB6A4A", "#EF3B2C", "#CB181D", "#67000D")
-
-
-# Category 1 (6 colors, greens and blues)
-c("#4CAF50", "#81C784", "#A5D6A7", "#E8F5E9", "#388E3C", "#2E7D32")
-
-# Category 2 (11 colors, oranges and purples)
-c("#FF9800", "#FFB74D", "#FFE0B2", "#FFCCBC", "#E64A19", "#BF360C", 
-  "#CE93D8", "#BA68C8", "#9C27B0", "#6A1B9A", "#4A148C")
-
-# Category 3 (6 colors, reds and yellows)
-c("#FFEB3B", "#FFF59D", "#FDD835", "#FFCA28", "#FFB300", "#FF6F00")
-
-  
