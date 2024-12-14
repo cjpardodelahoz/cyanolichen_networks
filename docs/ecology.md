@@ -19,6 +19,12 @@ Not sure exactly how, but we have to test how the responses to the process are s
 
 ## Structure of the regional network (Fig. 1?)
 
+Plot the map of Alberta with all sampled sites
+
+```sh
+Rscript scripts/ecology/plot_site_maps.R
+```
+
 We first quantified the structure of the regional network using... This will take a while (several hours)
 
 ```sh
@@ -34,7 +40,7 @@ Rscript scripts/ecology/plot_compound_network.R
 We used the module assignments from the compound network plot to map the pairs in the map of Alberta:
 
 ```sh
-Rscript scripts/ecology/plot_site_maps.R
+Rscript scripts/ecology/plot_module_maps.R
 ```
 
 ## Vertical vs. Horizontal transmission
