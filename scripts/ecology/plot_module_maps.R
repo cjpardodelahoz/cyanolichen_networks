@@ -222,6 +222,17 @@ abmi_sites_coord <- read_csv("data/tables/abmi_site_data.csv") %>%
   distinct(Site, .keep_all = T) %>%
   select(Site, Lat, Long)
 
+# Add random noise to duplicated rows
+set.seed(42) # Set seed for reproducibility
+
+# Identify duplicates based on 'Lat' and 'Long'
+is_duplicate <- duplicated(abmi_sites_coord[, c("Lat", "Long")]) | 
+  duplicated(abmi_sites_coord[, c("Lat", "Long")], fromLast = TRUE)
+
+# Add noise to duplicated rows
+abmi_sites_coord[is_duplicate, c("Lat", "Long")] <- abmi_sites_coord[is_duplicate, c("Lat", "Long")] + 
+  matrix(runif(sum(is_duplicate) * 2, -0.1, 0.1), ncol = 2)
+
 # Load module assignments data
 load("analyses/ecology/peltigera_module_assignments.RData")
 

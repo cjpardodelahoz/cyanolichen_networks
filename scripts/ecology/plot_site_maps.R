@@ -69,13 +69,24 @@ base_map <- ggplot() +
 
 ##### PLOT ALL AB SITES INCLUDED #####
 
+# Set seed for reproducibility
+set.seed(42) 
+
 # Load ABMI site data (regional) and transform to reference CRS
 all_abmi_sites <- read_csv("data/tables/abmi_site_data.csv") %>%
   # Remove duplicated sites
   filter(!duplicated(Site)) %>%
-  select(Lat, Long) %>%
-  # Transform crs
-  transform_crs()
+  select(Lat, Long)
+
+# Identify duplicate coordinates
+is_duplicate <- duplicated(all_abmi_sites) | duplicated(all_abmi_sites, fromLast = TRUE)
+
+# Add noise to duplicated rows
+all_abmi_sites[is_duplicate, ] <- all_abmi_sites[is_duplicate, ] + 
+  matrix(runif(sum(is_duplicate) * 2, -0.1, 0.1), ncol = 2)
+
+# Transform crs
+all_abmi_sites <- transform_crs(all_abmi_sites)
 
 # 14 sites from regional also included in local dataset
 local_sites <- c("1116",
