@@ -113,6 +113,8 @@ mat_raster_stretched_df <- as.data.frame(mat_raster_stretched, xy = T, na.rm = T
 mat_df$stretched_mat <- mat_raster_stretched_df$MAT
 colnames(mat_df) <- c("x", "y", "temperature", "stretched_mat")
 
+#c("#2166AC", "#67A9CF", "#D1E5F0", "#F6E8C3", "#FDDBC7", "#EF8A62", "#B2182B")
+
 # Base plot with MAT
 mat_base_map <- ggplot() +
   # Plot hillshade as a grayscale raster
@@ -120,9 +122,14 @@ mat_base_map <- ggplot() +
   scale_fill_gradient(low = "white", high = "black", name = "Hillshade", na.value = "transparent") +
   # Overlay precipitation raster
   geom_raster(data = mat_df, aes(x = x, y = y, fill = stretched_mat), alpha = 0.85) +
-  scale_fill_viridis_c(option = "C", name = "Temperature", na.value = "transparent",
-                       breaks = seq(0, 255, length.out = 5),  # Breaks in stretched scale (0 to 1)
-                       labels = round(seq(min(mat_df$temperature), max(mat_df$temperature), length.out = 5), 1)) +
+  scale_fill_gradientn(
+    colors = c("#2166AC", "#67A9CF", "#D1E5F0", "#F6E8C3", "#FDDBC7", "#F4A582", "#D6604D"),
+    name = "MAT (°C)",
+    breaks = seq(0, 255, length.out = 5),  # Breaks in stretched scale (0 to 255,)
+    labels = round(seq(min(mat_df$temperature), max(mat_df$temperature), length.out = 5), 1)) +
+  #scale_fill_viridis_c(option = "C", name = "Temperature", na.value = "transparent",
+  #                     breaks = seq(0, 255, length.out = 5),  # Breaks in stretched scale (0 to 1)
+  #                     labels = round(seq(min(mat_df$temperature), max(mat_df$temperature), length.out = 5), 1)) +
   # Add AB NRs shapefile overlay
   geom_sf(data = ab_nr_shp, fill = NA, color = "black", size = 0.7) +
   # Add labels
@@ -158,7 +165,8 @@ precip_base_map <- ggplot() +
   # Overlay precipitation raster
   new_scale_fill() +
   geom_raster(data = precip_df, aes(x = x, y = y, fill = map), alpha = 0.85) +
-  scale_fill_gradientn(colors = c("#BF812C", "#62EDF4", "#00ACB5", "#055D6B", "#003C30"),
+  scale_fill_gradientn(colors = c("#8C510A", "#FFF8E9", "#80CDC1", "#35978F", "#01665E", "#003C30"),
+                       name = "MAP (mm)",
                        limits = c(278, 1000),
                        oob = scales::squish,) +
                        #values = scales::rescale(c(-42.34, 0, 10, 30, 100, 256.59))) +
@@ -262,7 +270,7 @@ module6_sf <- get_module_sites(module_data = module_data, module = 6)
 # Module 1 on precipitation - within
 within_module1_map <- precip_base_map +
   geom_sf(data = module1_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Peltigera form module 1 don't switch modules
@@ -270,7 +278,7 @@ within_module1_map <- precip_base_map +
 # Module 1 on precipitation - Nostoc switch
 nostoc_switch_module1_map <- precip_base_map +
   geom_sf(data = module1_sf$nostoc_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Save the plots
@@ -288,19 +296,19 @@ ggsave(nostoc_switch_module1_map,
 # Module 2 on temperature - within
 within_module2_map <- mat_base_map +
   geom_sf(data = module2_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 2 on temperature - Peltigera switch
 peltigera_switch_module2_map <- mat_base_map +
   geom_sf(data = module2_sf$peltigera_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 2 on temperature - Nostoc switch
 nostoc_switch_module2_map <- mat_base_map +
   geom_sf(data = module2_sf$nostoc_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Save the plots
@@ -320,19 +328,19 @@ ggsave(nostoc_switch_module2_map,
 # Module 3 on temperature - within
 within_module3_map <- mat_base_map +
   geom_sf(data = module3_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 3 on temperature - Peltigera switch
 peltigera_switch_module3_map <- mat_base_map +
   geom_sf(data = module3_sf$peltigera_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 3 on temperature - Nostoc switch
 nostoc_switch_module3_map <- mat_base_map +
   geom_sf(data = module3_sf$nostoc_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Save the plots
@@ -353,19 +361,19 @@ ggsave(nostoc_switch_module3_map,
 # Module 4 on temperature - within
 within_module4_map <- mat_base_map +
   geom_sf(data = module4_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 4 on temperature - Peltigera switch
 peltigera_switch_module4_map <- mat_base_map +
   geom_sf(data = module4_sf$peltigera_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 4 on temperature - Nostoc switch
 nostoc_switch_module4_map <- mat_base_map +
   geom_sf(data = module4_sf$nostoc_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Save the plots
@@ -386,13 +394,13 @@ ggsave(nostoc_switch_module4_map,
 # Module 5 on temperature - within
 within_module5_map <- mat_base_map +
   geom_sf(data = module5_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 5 on temperature - Peltigera switch
 peltigera_switch_module5_map <- mat_base_map +
   geom_sf(data = module5_sf$peltigera_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Nostoc does not switch modules
@@ -412,19 +420,19 @@ ggsave(peltigera_switch_module5_map,
 # Module 6 on temperature - within
 within_module6_map <- mat_base_map +
   geom_sf(data = module6_sf$within_module, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 6 on temperature - Peltigera switch
 peltigera_switch_module6_map <- mat_base_map +
   geom_sf(data = module6_sf$peltigera_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Module 6 on temperature - Nostoc switch
 nostoc_switch_module6_map <- mat_base_map +
   geom_sf(data = module6_sf$nostoc_switch, aes(size = n_specimens), 
-          fill = "white", color = "black", shape = 21, stroke = 0.2, alpha = 1) +
+          fill = "white", color = "black", shape = 21, stroke = 0.4, alpha = 1) +
   scale_size_continuous(name = "Number of Specimens", limits = c(1, 32))
 
 # Save the plots
