@@ -119,7 +119,7 @@ colnames(mat_df) <- c("x", "y", "temperature", "stretched_mat")
 mat_base_map <- ggplot() +
   # Plot hillshade as a grayscale raster
   geom_raster(data = hillshade_df, aes(x = x, y = y, fill = hillshade), alpha = 0.8) +
-  scale_fill_gradient(low = "white", high = "black", name = "Hillshade", na.value = "transparent") +
+  scale_fill_gradient(low = "black", high = "white", name = "Hillshade", na.value = "transparent") +
   # Overlay precipitation raster
   geom_raster(data = mat_df, aes(x = x, y = y, fill = stretched_mat), alpha = 0.85) +
   scale_fill_gradientn(
@@ -160,7 +160,7 @@ colnames(precip_df) <- c("x", "y", "map")
 precip_base_map <- ggplot() +
   # Plot hillshade as a grayscale raster
   geom_raster(data = hillshade_df, aes(x = x, y = y, fill = hillshade), alpha = 0.8) +
-  scale_fill_gradient(low = "white", high = "black", name = "Hillshade",
+  scale_fill_gradient(low = "black", high = "white", name = "Hillshade",
                       guide = "none") +
   # Overlay precipitation raster
   new_scale_fill() +
