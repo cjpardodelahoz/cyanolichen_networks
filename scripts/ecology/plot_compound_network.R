@@ -56,25 +56,49 @@ abmi_peltigera_matrix_df$section <- factor(abmi_peltigera_matrix_df$section,
 abmi_peltigera_matrix_df$mycobiont_molecular_id <- factor(abmi_peltigera_matrix_df$mycobiont_molecular_id, levels = rownames(peltigera_matrix_compound$matrix))
 abmi_peltigera_matrix_df$nostoc_otu <- factor(abmi_peltigera_matrix_df$nostoc_otu, levels = rev(colnames(peltigera_matrix_compound$matrix)))
 
+# Colors for the sections
+peltigera_section_colors <- c("Chloropeltigera" = "#71C971",
+                                "Peltigera" = "#F4BDAA",
+                                "Peltidea" = "#5C8E6A",
+                                "Horizontales" = "#DD9D64",
+                                "Polydactylon" = "#BBC7B7",
+                                "Retifoveatae" = "#895855")
+nostoc_section_colors <- c(
+  "section24" = "#75A7B0",      # Warm golden yellow
+  "section31" = "#A4C96F",      # Softer slate blue-green
+  "section32" = "#B6805A",      # Warm terra cotta
+  "section34" = "#4F7DB0",      # Light cornflower blue
+  "section35" = "#C4A5C3",      # Light mauve
+  "section36" = "#D3B256",      # Fresh spring green
+  "section37" = "#70698d",      # Soft lavender purple
+  "section39" = "#a0c5df",      # Pastel teal
+  "section310" = "#A4906D",     # Muted tan
+  "section311" = "#E3C8A2",     # Light sandstone
+  "section312" = "#829941"      # Light sage green
+)
+
+
+
 # Plot the matrix with compound topology
 # Start with the base plot
 peltigera_compound_plot <- ggplot(abmi_peltigera_matrix_df, aes(x = mycobiont_molecular_id, y = nostoc_otu, fill = interaction_frequency)) +
             geom_tile(height = 0.8, width = 0.8) +
-            scale_fill_gradient(low = "white", high = "black",
+            scale_fill_gradientn(colors = c("white", "gray94", "black"), 
+                values = scales::rescale(c(0, 1, max(abmi_peltigera_matrix_df$interaction_frequency))),
                 guide = guide_colorbar(title = "Interaction frequency",
                                     title.position = "top",
                                     order = 1)) +
             new_scale_fill() +
             geom_tile(data = abmi_peltigera_matrix_df, 
-                aes(x = -0.3, y = nostoc_otu, fill = section), height = 1, width = 0.4) +
-            scale_fill_brewer(palette = "Set3",
+                aes(x = -0.8, y = nostoc_otu, fill = section), height = 1, width = 0.8) +
+            scale_fill_manual(values = nostoc_section_colors,
                 guide = guide_legend(title = "Nostoc section",
                                     title.position = "top",
                                     order = 2)) +
             new_scale_fill() +
             geom_tile(data = abmi_peltigera_matrix_df, 
-                aes(x = mycobiont_molecular_id, y = -0.3, fill = peltigera_section), height = 0.4) +
-            scale_fill_brewer(palette = "Set2",
+                aes(x = mycobiont_molecular_id, y = -0.8, fill = peltigera_section), height = 0.8) +
+            scale_fill_manual(values = peltigera_section_colors,
                 guide = guide_legend(title = "Peltigera section",
                                     title.position = "top",
                                     order = 3)) +
@@ -90,8 +114,8 @@ peltigera_compound_plot <- ggplot(abmi_peltigera_matrix_df, aes(x = mycobiont_mo
                 panel.grid = element_blank(),
                 legend.position = "top",
                 legend.direction = "horizontal",
-                legend.key.height = unit(2, "mm"),
-                legend.key.width = unit(2, "mm"),
+                legend.key.height = unit(2.5, "mm"),
+                legend.key.width = unit(2.5, "mm"),
                 legend.text = element_text(size = 6),
                 legend.title = element_text(size = 6),
                 axis.title = element_text(size = 8))
