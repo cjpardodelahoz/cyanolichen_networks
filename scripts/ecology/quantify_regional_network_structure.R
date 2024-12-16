@@ -13,7 +13,7 @@ library(ggnewscale)
 # Function to compute the metrics for the full network starting from the interaction matrix
 quantify_network_topology <- function(interaction_matrix, network_name) {
     # Simulate null matrices for modularity test
-    free_null_matrices <- bipartite::nullmodel(interaction_matrix, method = "r2d", N = 999)
+    free_null_matrices <- bipartite::nullmodel(interaction_matrix, method = "vaznull", N = 999)
     # Compute modularity for the free null matrices
     free_null_modularity <- sapply(free_null_matrices, function(x) bipartite::metaComputeModules(x, method = "Beckett")@likelihood)
     # Compute modularity for the network and get module partitions
@@ -21,11 +21,11 @@ quantify_network_topology <- function(interaction_matrix, network_name) {
     # Comute expected modularity with the free null model
     expected_modularity <- mean(free_null_modularity)
     # Compute modularity z-score
-    modularity_z_score <- (observed_modularity@likelihood - expected_modularity) / sd(free_null_modularity)
+    z_score_modularity <- (observed_modularity@likelihood - expected_modularity) / sd(free_null_modularity)
     # Compute modularity p-value
-    modularity_p_value <- 1 / rank(c(observed_modularity@likelihood, free_null_modularity))[1]
+    p_value_modularity <- 1 / rank(c(observed_modularity@likelihood, free_null_modularity))[1]
     # If the interaction matrix is modular, continue with low-level nestedness analyses
-    if (modularity_p_value < 0.01 & modularity_z_score > 2.0) {
+    if (p_value_modularity < 0.5 & z_score_modularity > 2.0) {
         # Get module partitions
         module_partitions <- bipartite::module2constraints(observed_modularity)
         module_row_partitions <- module_partitions[1:nrow(interaction_matrix)]
@@ -69,9 +69,9 @@ quantify_network_topology <- function(interaction_matrix, network_name) {
             # Compute expected modularity with the free null model
             expected_modularity = mean(free_null_modularity),
             # Compute modularity z-score
-            modularity_z_score = (observed_modularity - expected_modularity) / sd(free_null_modularity),
+            z_score_modularity = (observed_modularity - expected_modularity) / sd(free_null_modularity),
             # Compute modularity p-value
-            modularity_p_value = 1 / rank(c(observed_modularity, free_null_modularity))[1],
+            p_value_modularity = 1 / rank(c(observed_modularity, free_null_modularity))[1],
             # Get full matrix nestedness (WNODA)
             observed_wnoda_full = observed_nestedness$WNODAmatrix,
             # Get same-module (SM) and different-module (DM) nestedness
@@ -83,16 +83,20 @@ quantify_network_topology <- function(interaction_matrix, network_name) {
             expected_wnoda_sm_proportional = mean(proportional_null_nestedness["WNODA_SM_matrix", ] %>% unlist()),
             expected_wnoda_dm_proportional = mean(proportional_null_nestedness["WNODA_DM_matrix", ] %>% unlist()),
             # Compute SM and DM z-scores
-            z_score_sm_equiprobable = (observed_wnoda_sm - expected_wnoda_sm_equiprobable) / sd(equiprobable_null_nestedness["WNODA_SM_matrix", ] %>% unlist()),
-            z_score_dm_equiprobable = (observed_wnoda_dm - expected_wnoda_dm_equiprobable) / sd(equiprobable_null_nestedness["WNODA_DM_matrix", ] %>% unlist()),
-            z_score_sm_proportional = (observed_wnoda_sm - expected_wnoda_sm_proportional) / sd(proportional_null_nestedness["WNODA_SM_matrix", ] %>% unlist()),
-            z_score_dm_proportional = (observed_wnoda_dm - expected_wnoda_dm_proportional) / sd(proportional_null_nestedness["WNODA_DM_matrix", ] %>% unlist())
+            z_score_wnoda_sm_equiprobable = (observed_wnoda_sm - expected_wnoda_sm_equiprobable) / sd(equiprobable_null_nestedness["WNODA_SM_matrix", ] %>% unlist()),
+            z_score_wnoda_dm_equiprobable = (observed_wnoda_dm - expected_wnoda_dm_equiprobable) / sd(equiprobable_null_nestedness["WNODA_DM_matrix", ] %>% unlist()),
+            z_score_wnoda_sm_proportional = (observed_wnoda_sm - expected_wnoda_sm_proportional) / sd(proportional_null_nestedness["WNODA_SM_matrix", ] %>% unlist()),
+            z_score_wnoda_dm_proportional = (observed_wnoda_dm - expected_wnoda_dm_proportional) / sd(proportional_null_nestedness["WNODA_DM_matrix", ] %>% unlist()),
+            # Calculate p- values for SM nestedness with the equiprobable and proportional null models
+            p_value_wnoda_sm_equiprobable = 1 / rank(c(observed_wnoda_sm, equiprobable_null_nestedness["WNODA_SM_matrix", ] %>% unlist()))[1],
+            p_value_wnoda_dm_equiprobable = 1 / rank(c(observed_wnoda_dm, equiprobable_null_nestedness["WNODA_DM_matrix", ] %>% unlist()))[1],
+            p_value_wnoda_sm_proportional = 1 / rank(c(observed_wnoda_sm, proportional_null_nestedness["WNODA_SM_matrix", ] %>% unlist()))[1],
+            p_value_wnoda_dm_proportional = 1 / rank(c(observed_wnoda_dm, proportional_null_nestedness["WNODA_DM_matrix", ] %>% unlist()))[1]
         )
     # If the interaction matrix is not modular, calculate only observed nestedness and return a table with observed_wnoda_full and the rest columns with NA values
     } else {
         # Compute nestedness for the network with the WNODA method
         observed_nestedness <- bipartite::nest.smdm(interaction_matrix, 
-            constraints = module_partitions, 
             weighted = TRUE,
             decreasing = "abund")
         # Compute metrics for the network and store in a table
@@ -106,9 +110,9 @@ quantify_network_topology <- function(interaction_matrix, network_name) {
             # Compute expected modularity with the free null model
             expected_modularity = mean(free_null_modularity),
             # Compute modularity z-score
-            modularity_z_score = (observed_modularity - expected_modularity) / sd(free_null_modularity),
+            z_score_modularity = (observed_modularity - expected_modularity) / sd(free_null_modularity),
             # Compute modularity p-value
-            modularity_p_value = 1 / rank(c(observed_modularity, free_null_modularity))[1],
+            p_value_modularity = 1 / rank(c(observed_modularity, free_null_modularity))[1],
             # Get full matrix nestedness (WNODA)
             observed_wnoda_full = observed_nestedness$WNODAmatrix,
             # Get same-module (SM) and different-module (DM) nestedness
@@ -120,10 +124,15 @@ quantify_network_topology <- function(interaction_matrix, network_name) {
             expected_wnoda_sm_proportional = NA,
             expected_wnoda_dm_proportional = NA,
             # Compute SM and DM z-scores
-            z_score_sm_equiprobable = NA,
-            z_score_dm_equiprobable = NA,
-            z_score_sm_proportional = NA,
-            z_score_dm_proportional = NA
+            z_score_wnoda_sm_equiprobable = NA,
+            z_score_wnoda_dm_equiprobable = NA,
+            z_score_wnoda_sm_proportional = NA,
+            z_score_wnoda_dm_proportional = NA,
+            # Calculate p- values for SM nestedness with the equiprobable and proportional null models
+            p_value_wnoda_sm_equiprobable = NA,
+            p_value_wnoda_dm_equiprobable = NA,
+            p_value_wnoda_sm_proportional = NA,
+            p_value_wnoda_dm_proportional = NA
         )
     }    
     return(network_metrics)
@@ -192,14 +201,11 @@ save(abmi_matrix_full, file = "analyses/ecology/full_interaction_matrix.RData")
 save(abmi_matrix_peltigera, file = "analyses/ecology/peltigera_interaction_matrix.RData")
 
 
-##### REGIONAL NETWORK TOPOLOGY ANALYSES #####
+##### REGIONAL NETWORK STRUCTURE ANALYSES #####
 
 # Compute metrics for the Peltigera network and the full network
 peltigera_network_metrics <- quantify_network_topology(abmi_matrix_peltigera, "peltigera")
 full_network_metrics <- quantify_network_topology(abmi_matrix_full, "full")
-
-# Merge the network metrics into a single table
-regional_network_metrics <- bind_rows(peltigera_network_metrics, full_network_metrics)
 
 # Save the network metric objects to a file
 if(!dir.exists("analyses/ecology")) {
@@ -207,6 +213,18 @@ if(!dir.exists("analyses/ecology")) {
 }
 save(peltigera_network_metrics, file = "analyses/ecology/peltigera_regional_network_metrics.RData")
 save(full_network_metrics, file = "analyses/ecology/full_regional_network_metrics.RData")
+
+# Table with reported metrics
+regional_network_metrics <- bind_rows(peltigera_network_metrics, full_network_metrics) %>%
+    select(-contains("wnoda_sm_proportional"),
+            -contains("wnoda_dm_proportional"),
+            -observed_wnoda_full) %>%
+    rename_with(~ str_replace(., "_equiprobable", ""), contains("wnoda")) %>%
+    pivot_longer(
+        cols = -network,
+        names_to = c(".value", "metric"),
+        names_pattern = "(observed|expected|z_score|p_value)_(.*)")
+
 
 # Save the network metrics table to a CSV file
 write_csv(network_metrics, "documents/tables/regional_network_metrics.csv")
