@@ -227,4 +227,4 @@ regional_network_metrics <- bind_rows(peltigera_network_metrics, full_network_me
 
 
 # Save the network metrics table to a CSV file
-write_csv(network_metrics, "documents/tables/regional_network_metrics.csv")
+write_csv(regional_network_metrics, "documents/tables/regional_network_metrics.csv")
