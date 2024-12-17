@@ -9,6 +9,7 @@ Then We are going to answer the main question directly with:
 
 Then we will test predictions from the mechanisms inferred with the modeling, including:
 
+-Module climatic overlap vs module connectivity? This seems to explain connectivity between modules C, D, and E, but not module A
 -Relationship between specialization and abundance (including deviations of interaction frequencies from relative abundance)
 -Species turnover vs interaction turnover along environmental gradients (using local dataset)
 -Frequency of vertical and horizontal transmission--at regional and local scale
@@ -38,19 +39,19 @@ Rscript scripts/ecology/plot_site_maps.R
 
 We quantified network structure following the three-step procedure proposed by [Felix et al. 2022](https://doi.org/10.1111/oik.09538) to distinguish simple (i.e., modular or nested) from compound (modular with low-level nestedness) network structures.
 
-***Step 1.*** We determined whether the network was modular by calculating Barber modularity (Q) of the observed network and comparing it to the expectation from null matrices simulated under a modell (*vaznull*) that preserves the connectance and degree distribution of the empirical network. Because the networks were significantly modular (i.e., z-score > 2 and p < 0.01), we proceeded to step 2.
+***Step 1.*** We determined whether the network was modular by calculating Barber modularity (Q) of the observed network and comparing it to the expectation from null matrices simulated under a model (*vaznull*) that preserves the connectance and degree distribution of the empirical network. Because the networks were significantly modular (i.e., z-score > 2 and p < 0.01), we proceeded to step 2.
 
-***Step 2.*** We quantified nestedness within (*Nsm*) and outside (*Ndm*) modules with the WNODA index. "Outside" modules refers to the adjacency areas of the modules sensu Felix et al. 2022.
+***Step 2.*** We quantified nestedness within (*Nsm*) and outside (*Ndm*) modules with the WNODA index. "Outside" modules refers to the adjacency areas of the modules sensu [Felix et al. 2022](https://doi.org/10.1111/oik.09538).
 
-***Step 3.*** We evaluated both *Nsm* and *Ndm* given the network's modular structure by computing z-scores with a null model that preserves the modular structure of the empirical network and the connectance within and outside of modules (equiprobable-restricted null). We also calculated z-scores with the proportional restricted null model, which preserves degree distribution in addition to the properties preserved by the quiprobable restricted null. A compound network will have *Nsm* and *Ndm* that are significantly higher than expected under the equiprobable null, and similar *Nsm* and *Ndm* to the expectation under the proportional null.
+***Step 3.*** We evaluated both *Nsm* and *Ndm* given the network's modular structure by computing z-scores with a null model that preserves the modular structure of the empirical network and the connectance within and outside of modules (equiprobable-restricted null). We also calculated z-scores with the proportional restricted null model, which preserves degree distribution in addition to the properties preserved by the equiprobable restricted null. A compound network will have *Nsm* and *Ndm* that are significantly higher than expected under the equiprobable null, and similar *Nsm* and *Ndm* to the expectation under the proportional null.
 
-We did these calculations for the full regional dataset (including all cyanolichens), and a subset including only *Peltigera*, which represent the majority of specimens (2068 out of 2148). This will take a while (several hours):
+We did these calculations for the full regional dataset (including all cyanolichens), and a subset including only *Peltigera*, which represent the majority of specimens (2068 out of 2148). This will take a while (~12-14 hrs):
 
 ```sh
 Rscript scripts/ecology/quantify_regional_network_structure.R
 ```
 
-The script will print the results (Table SX) to `documents/tables/regional_network_metrics.csv`. It also generates `.RData` files with the interactino matrices and the full set of network structure metrics (including results not reported from proportional-restricted null and WNODA for full matrix) under `analyses/ecology/*interaction_matrix.RData` and `analyses/ecology/*network_metrics.RData`
+The script will print the results (Table SX) to `documents/tables/regional_network_metrics.csv`. It also generates `.RData` files with the interaction matrices and the full set of network structure metrics (including results not reported from proportional-restricted null and WNODA for full matrix) under `analyses/ecology/*interaction_matrix.RData` and `analyses/ecology/*network_metrics.RData`
 
 ### Plot of *Peltigere-Nostoc* regional network and module distributions
 
