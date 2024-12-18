@@ -15,40 +15,10 @@ source("scripts/ecology/gravel2019_functions/fit_all_pairs.r")
 
 ##### PREP REGIONAL DATA FOR MODEL FITTING #####
 
-# Load ABMI extra dataset
-abmi_extra_data <- read_csv("documents/tables/abmi_extra_voucher.csv") %>%
-    # Add ABMI_ prefix to the Site column
-    mutate(site = paste0("ABMI_", site),
-            abmi_id = as.numeric(abmi_id)) %>%
-    # Remove underscores and periods from the mycobiont_molecular_id, subclade, section, and species_complex columns
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "_", "")) %>%
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "\\.", "")) %>%
-    mutate(subclade = str_replace_all(subclade, "_", "")) %>%
-    mutate(section = str_replace_all(section, "_", "")) %>%
-    mutate(section = str_replace_all(section, "\\.", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "_", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "\\.", ""))
+# Load ABMI dataset and filter to include only Peltigera with associated nostoc
+abmi_id_data <- read_csv("data/tables/abmi_id_data.csv") %>% 
+    filter(!is.na(nostoc_otu) & !is.na(mycobiont_molecular_id) &  str_detect(mycobiont_molecular_id, "Peltigera"))
 
-# Load ABMI ID dataset from Pardo-De la Hoz et al. (2024)-Data S1C and merge with ABMI extra data
-abmi_id_data <- read_csv("data/tables/nostoc_datas1c.csv") %>% 
-    select(1:Collector) %>%
-    # Rename column names as lower case and replace spaces with underscores
-    rename_all(tolower) %>%
-    rename_all(~str_replace_all(., " ", "_")) %>%
-    # Merge ABMI ID data with ABMI extra data
-    bind_rows(abmi_extra_data) %>%
-    # Replace spaces and remove periods from Mycobiont_molecular_ID column with underscores
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, " ", "")) %>%
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "\\.", "")) %>%
-    # Remove spaces and periods from section and species_complex columns with underscores
-    mutate(section = str_replace_all(section, " ", "")) %>%
-    mutate(section = str_replace_all(section, "\\.", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, " ", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "\\.", "")) %>%
-    # Coalesce the columns phylogroup and species complex into a new column called "nostoc_otu"
-    mutate(nostoc_otu = coalesce(phylogroup, species_complex)) %>%
-    # Generate a site_year column by concatenating the site and year columns
-    mutate(site_year = paste(str_replace(site, " ", "_"), year, sep = "_"))
 
 # Occurrence and interaction combinations in regional data
 mycobiont_molecular_id <- abmi_id_data$mycobiont_molecular_id
@@ -72,25 +42,35 @@ pairs_data <- expand_grid(IDi = unique(abmi_id_data$mycobiont_molecular_id),
     # Score cooccurrence
     mutate(Xij = if_else(Xi == 1 & Xj == 1, 1, 0)) %>%
     # Score interactions
-    mutate(Lij = if_else(paste0(IDi, IDj, site_year) %in% interaction_occurrence, 1, 0))
+    mutate(Lij = if_else(paste0(IDi, IDj, site_year) %in% interaction_occurrence, 1, 0)) %>%
+    # Filter for Peltigera pairs
+    filter(str_detect(IDi, "Peltigera")) %>%
+    # Filter for pairs IDi and IDj that cooccur (Xij) at least once
+    group_by(IDi, IDj) %>%
+    filter(sum(Xij) > 0) %>%
+    ungroup()
+
+# Summarise properties for each pair
+pairs_data_summary <- pairs_data %>%
+    group_by(IDi, IDj) %>%
+    summarize(observed = sum(Lij) > 0,
+            cooccurring_sites = sum(Xij)) %>%
+    ungroup() %>%
+    group_by(IDj) %>%
+    mutate(nostoc_degree = n_distinct(IDi)) %>%
+        mutate(nostoc_degree = sum(observed)) %>%
+    ungroup() %>%
+    group_by(IDi) %>%
+    mutate(mycobiont_degree = n_distinct(IDj)) %>%
+        mutate(mycobiont_degree = sum(observed)) %>%
+    ungroup() %>%
+    mutate(assymetry = abs(nostoc_degree - mycobiont_degree) / (nostoc_degree + mycobiont_degree))
 
 
 ##### PREP REGIONAL SITE DATA #####
 
 # Load ABMI site data
-load("data/r_datasets/abmi_north_south_quad.Rdata")
-rownames(d_qha.all) <- NULL
-
-# Format site data to match pairs data
-abmi_site_data <- d_qha.all %>%
-    # Add "ABMI_" prefix to the SiteYear column
-    mutate(SiteYear = paste0("ABMI_", SiteYear)) %>%
-    # Filter QUAD to NE
-    filter(QUAD == "NE") %>%
-    # Rename DD18 as DDA18 and DD_18 as DDB18
-    rename(DDA18 = DD18, DDB18 = DD_18) %>%
-    # Remove underscores from column names
-    rename_all(~str_replace_all(., "_", ""))
+abmi_site_data <- read_csv("data/tables/abmi_site_data.csv")
 
 # Environmental data for included sites
 edata <- pairs_data %>%
@@ -104,7 +84,7 @@ edata <- pairs_data %>%
 
 # are there sites with missing data?
 #edata %>%
-#    filter(is.na(MAT) | is.na(MAP))
+#    filter(is.na(T) | is.na(PP))
 
 
 ##### JOIN E AND SPLIT BY PAIRS #####
@@ -120,7 +100,7 @@ DF_split <- split(DF,pairs_ID)
 
 ##### FIT MODELS FOR ALL PAIRS #####
 
-DF_split <- DF_split[c(806, 913)]
+#DF_split <- DF_split[c(806, 913)]
 # Specify the environmental variables
 Enames = c("T","T2","PP","PP2")
 
@@ -140,7 +120,8 @@ write_csv(fit_summary, "fit_summary.csv")
 # Rank models by AIC
 model_ranks <- fit_result %>%
     group_by(mycobiont, nostoc) %>%
-    mutate(rank = rank(AIC))
+    mutate(rank = as.factor(min_rank(AIC))) %>%
+    left_join(pairs_data_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
 
 # Calculate the percent likelihood gain for the best model compared to the second-best model
 likelihood_gain <- fit_result %>%
@@ -164,34 +145,52 @@ custom_theme <- theme(
     )
 
 # Custom colors for each model
-model_colors <- c("C0_L2" = "red", 
-                    "C1_L2" = "blue", 
-                    "C2_L0" = "green", 
-                    "C2_L1" = "purple", 
-                    "C2_L2" = "orange", 
-                    "C3_L2" = "yellow")
+model_colors <- c("C0_L2" = "#8F6D4A", 
+                    "C1_L2" = "#CAB79E", 
+                    "C2_L0" = "#8A708A", 
+                    "C2_L1" = "#C3B8C3", 
+                    "C2_L2" = "#7D927A", 
+                    "C3_L2" = "#BFC8BC")
 
-# Custom labels for the legend
-model_labels <- c("C0_L2" = "Model C0_L2",
-                   "C1_L2" = "Model C1_L2",
-                   "C2_L0" = "Model C2_L0",
-                   "C2_L1" = "Model C2_L1",
-                   "C2_L2" = "Model C2_L2",
-                   "C3_L2" = "Model C3_L2")
-
-# Plot proportion of times each model was in each rank
-model_ranks %>%
+# Model ranks plot including all pairs
+model_ranks_plot_all <- model_ranks %>%
     ggplot(aes(x = rank, fill = model)) +
     geom_bar(position = "fill") +
     labs(x = "Rank", y = "Proportion") +
-    scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6)) +
     scale_fill_manual(values = model_colors, labels = model_labels) +
     guides(fill = guide_legend(title = "Model")) +
     custom_theme
 
-# Save the plot as a PDF
-ggsave("fig.pdf", width = 6, height = 4)
+# Model ranks plot including only pairs with at least one interaction
+model_ranks_plot_interacting <- model_ranks %>%
+    filter(observed) %>%
+    ggplot(aes(x = rank, fill = model)) +
+    geom_bar(position = "fill") +
+    labs(x = "Rank", y = "Proportion") +
+    scale_fill_manual(values = model_colors, labels = model_labels) +
+    guides(fill = guide_legend(title = "Model")) +
+    custom_theme
 
+# HIstogram with specialization assymetry for top two models
+assymetry_hist <- model_ranks %>%
+    filter(model %in% c("C2_L0", "C2_L1") & rank == 1 & observed) %>%
+    mutate(model = factor(model, levels = c("C2_L1", "C2_L0"))) %>% # Reorder levels
+    ggplot(aes(x = assymetry, fill = model)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 15) +
+    labs(x = "Assymetry", y = "Count") +
+    scale_fill_manual(
+        values = c("C2_L0" = "#8A708A", "C2_L1" = "#C3B8C3"),
+        labels = c("C2_L0" = "Model C2_L0", "C2_L1" = "Model C2_L1")
+    ) +
+    guides(fill = guide_legend(title = "Model")) +
+    custom_theme
+
+
+
+
+
+# Save the plot as a PDF
+ggsave("fig.pdf", width = 12, height = 9, units = "cm")
 
 # Hiistogram of the percent likelihood gain
 likelihood_gain %>%
@@ -201,7 +200,14 @@ likelihood_gain %>%
     custom_theme
 
 # Save the plot as a PDF
-ggsave("fig2.pdf", width = 6, height = 4)
+ggsave("fig2.pdf", width = 12, height = 8)
+
+
+# Give me the records in DF_split$`Peltigeraaffcastanea sppcomplex31a` for which Xij = 1
+DF_split$`Peltigeraaffcollina III`[DF_split$`Peltigeraaffcollina III`$Xij == 1,]
+
+
+
 
 
 ##### EXAMPLE PAIR #####
