@@ -15,10 +15,13 @@ source("scripts/ecology/gravel2019_functions/fit_all_pairs.r")
 
 ##### PREP REGIONAL DATA FOR MODEL FITTING #####
 
+# Load Peltigera-Nostoc interaction matrix
+load("analyses/ecology/peltigera_interaction_matrix.RData")
+total_interactions <- sum(abmi_matrix_peltigera)
+
 # Load ABMI dataset and filter to include only Peltigera with associated nostoc
 abmi_id_data <- read_csv("data/tables/abmi_id_data.csv") %>% 
     filter(!is.na(nostoc_otu) & !is.na(mycobiont_molecular_id) &  str_detect(mycobiont_molecular_id, "Peltigera"))
-
 
 # Occurrence and interaction combinations in regional data
 mycobiont_molecular_id <- abmi_id_data$mycobiont_molecular_id
@@ -44,18 +47,49 @@ pairs_data <- expand_grid(IDi = unique(abmi_id_data$mycobiont_molecular_id),
     # Score interactions
     mutate(Lij = if_else(paste0(IDi, IDj, site_year) %in% interaction_occurrence, 1, 0)) %>%
     # Filter for Peltigera pairs
-    filter(str_detect(IDi, "Peltigera")) %>%
+    filter(str_detect(IDi, "Peltigera")) #%>%
     # Filter for pairs IDi and IDj that cooccur (Xij) at least once
+    #group_by(IDi, IDj) %>%
+    #filter(sum(Xij) > 0) %>%
+    #ungroup()
+
+# Pair data for pairs that cooccur at least once
+pairs_data_cooccur <- pairs_data %>%
     group_by(IDi, IDj) %>%
-    filter(sum(Xij) > 0) %>%
+    filter(sum(Xij) > 10) %>%
     ungroup()
 
-# Summarise properties for each pair
+# Pairs that interact every time they cooccur
+model_force <- pairs_data_cooccur %>%
+    group_by(IDi, IDj) %>%
+    summarise(coo = sum(Xij),
+                inter = sum(Lij)) %>%
+    filter(coo == inter)
+
+# Summarise properties for all pairs
 pairs_data_summary <- pairs_data %>%
     group_by(IDi, IDj) %>%
     summarize(observed = sum(Lij) > 0,
             cooccurring_sites = sum(Xij)) %>%
     ungroup() %>%
+    mutate(regional_frequency = map2_dbl(IDi, IDj, ~ abmi_matrix_peltigera[.x, .y]) / total_interactions) %>%
+    group_by(IDj) %>%
+    mutate(nostoc_degree = n_distinct(IDi)) %>%
+        mutate(nostoc_degree = sum(observed)) %>%
+    ungroup() %>%
+    group_by(IDi) %>%
+    mutate(mycobiont_degree = n_distinct(IDj)) %>%
+        mutate(mycobiont_degree = sum(observed)) %>%
+    ungroup() %>%
+    mutate(assymetry = abs(nostoc_degree - mycobiont_degree) / (nostoc_degree + mycobiont_degree))
+
+# Summarise properties for each cooccurring pair
+pairs_data_cooccur_summary <- pairs_data_cooccur %>%
+    group_by(IDi, IDj) %>%
+    summarize(observed = sum(Lij) > 0,
+            cooccurring_sites = sum(Xij)) %>%
+    ungroup() %>%
+    mutate(regional_frequency = map2_dbl(IDi, IDj, ~ abmi_matrix_peltigera[.x, .y]) / total_interactions) %>%
     group_by(IDj) %>%
     mutate(nostoc_degree = n_distinct(IDi)) %>%
         mutate(nostoc_degree = sum(observed)) %>%
@@ -73,14 +107,17 @@ pairs_data_summary <- pairs_data %>%
 abmi_site_data <- read_csv("data/tables/abmi_site_data.csv")
 
 # Environmental data for included sites
-edata <- pairs_data %>%
+edata <- pairs_data_cooccur %>%
     select(site_year) %>%
     left_join(abmi_site_data, by = c("site_year" = "SiteYear")) %>%
-    select(MAT, MAP) %>%
-    mutate(T2 = MAT^2,
-        PP2 = MAP^2) %>%
-    rename(T = MAT,
-        PP = MAP)
+    select(MAT, 
+            MAP,
+            mean_canopy_closure,
+            Elevation,
+            proportion_conifer
+            ) %>%
+    mutate(MAT2 = MAT^2,
+        MAP2 = MAP^2)
 
 # are there sites with missing data?
 #edata %>%
@@ -90,19 +127,30 @@ edata <- pairs_data %>%
 ##### JOIN E AND SPLIT BY PAIRS #####
 
 # Join pair and climate data
-DF <- as.data.frame(pairs_data)
+DF <- as.data.frame(pairs_data_cooccur)
 DF$E <- as.data.frame(edata)
 
 # Split the DF into a list of pairs of species
 pairs_ID <- as.factor(paste(DF$IDi,DF$IDj))
 DF_split <- split(DF,pairs_ID)
 
+# Examine specifc pairs in DF_split
+#DF_split$`Peltigeraleucophlebia6 XXXIII`[DF_split$`Peltigeraleucophlebia6 XXXIII`$Xij == 1,] 
+
+
 
 ##### FIT MODELS FOR ALL PAIRS #####
 
 #DF_split <- DF_split[c(806, 913)]
 # Specify the environmental variables
-Enames = c("T","T2","PP","PP2")
+Enames = c("MAT"#,
+            #"MAT2",
+            #"MAP"#,
+            #"MAP2"#, 
+            #"mean_canopy_closure"#, 
+            #"Elevation"#, 
+            #"proportion_conifer"
+            )
 
 # Fit all models to all pairs
 fit_result <- fit_all_pairs(DF_split, Enames)
@@ -115,21 +163,44 @@ full_fit_summary <- fit_result %>%
               AIC = -2 * LL + 2 * npars)
 
 # Write the full fit summary to a CSV file
-write_csv(fit_summary, "fit_summary.csv")
+write_csv(fit_summary, "documents/tables/model_fit_summary.csv")
 
-# Rank models by AIC
+# Rank models by AIC - Force ties between C2_L0 and C2_L1 to to score the best model as C2_L0
 model_ranks <- fit_result %>%
     group_by(mycobiont, nostoc) %>%
-    mutate(rank = as.factor(min_rank(AIC))) %>%
-    left_join(pairs_data_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+    mutate(rank = min_rank(AIC)) %>%
+    ungroup() %>%
+    left_join(model_force, by = c("mycobiont" = "IDi", "nostoc" = "IDj"), suffix = c("", "_tied")) %>%
+    mutate(rank = if_else(!is.na(coo) & model == "C2_L0", 1, rank),
+            rank = if_else(!is.na(coo) & model == "C2_L1", 2, rank)) %>%
+    select(-coo, -inter) %>%
+    left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+
+# What are the best models for pairs that never interact?
+#model_ranks %>%
+#    filter(!observed) %>%
+#    group_by(mycobiont, nostoc) %>%
+#    summarize(best_model = model[rank == 1]) %>%
+#    pull(best_model) %>%
+#    unique()
+
+# What fraction of pairs for which the best model is C2_L0 never interact? - 0.9376147
+C2_L0_observed <- model_ranks %>%
+    filter(model == "C2_L0" & rank == 1 & observed) %>%
+    nrow()
+C2_L0_unobserved <- model_ranks %>%
+    filter(model == "C2_L0" & rank == 1 & !observed) %>%
+    nrow()
+C2_L0_unobserved / (C2_L0_observed + C2_L0_unobserved)
+    
 
 # Calculate the percent likelihood gain for the best model compared to the second-best model
-likelihood_gain <- fit_result %>%
-    group_by(mycobiont, nostoc) %>%
-    mutate(rank = rank(AIC)) %>%
-    filter(rank %in% c(1, 2 ,6)) %>%
-    group_by(mycobiont, nostoc) %>%
-    summarize(percent_likelihood_gain = -(LL[rank == 2] - LL[rank == 1]) / (LL[rank == 6] - LL[rank == 1])*100)
+#likelihood_gain <- fit_result %>%
+#    group_by(mycobiont, nostoc) %>%
+#    mutate(rank = rank(AIC)) %>%
+#    filter(rank %in% c(1, 2 ,6)) %>%
+#    group_by(mycobiont, nostoc) %>%
+#    summarize(percent_likelihood_gain = -(LL[rank == 2] - LL[rank == 1]) / (LL[rank == 6] - LL[rank == 1])*100)
     
 
 ##### PLOT MODEL FITTING RESULTS #####
@@ -152,62 +223,87 @@ model_colors <- c("C0_L2" = "#8F6D4A",
                     "C2_L2" = "#7D927A", 
                     "C3_L2" = "#BFC8BC")
 
+# Custom labels for the legend
+model_labels <- c("C0_L2" = "Model C0_L2",
+                   "C1_L2" = "Model C1_L2",
+                   "C2_L0" = "Model C2_L0",
+                   "C2_L1" = "Model C2_L1",
+                   "C2_L2" = "Model C2_L2",
+                   "C3_L2" = "Model C3_L2")
+
 # Model ranks plot including all pairs
-model_ranks_plot_all <- model_ranks %>%
+model_ranks_plot <- model_ranks %>%
     ggplot(aes(x = rank, fill = model)) +
     geom_bar(position = "fill") +
-    labs(x = "Rank", y = "Proportion") +
+    labs(x = "Rank (best to worst)", y = "Proportion of pairs") +
+    scale_fill_manual(values = model_colors, labels = model_labels) +
+    guides(fill = guide_legend(title = "Model")) +
+    custom_theme
+
+# Model ranks plot weighted by pair regional frequency
+model_ranks_plot_weighted <- model_ranks %>%
+    ggplot(aes(x = rank, fill = model, weight = regional_frequency)) +
+    geom_bar(position = "fill") +
+    labs(x = "Rank (best to worst)", y = "Proportion of pairs weighted by regional freq.") +
     scale_fill_manual(values = model_colors, labels = model_labels) +
     guides(fill = guide_legend(title = "Model")) +
     custom_theme
 
 # Model ranks plot including only pairs with at least one interaction
-model_ranks_plot_interacting <- model_ranks %>%
-    filter(observed) %>%
-    ggplot(aes(x = rank, fill = model)) +
-    geom_bar(position = "fill") +
-    labs(x = "Rank", y = "Proportion") +
-    scale_fill_manual(values = model_colors, labels = model_labels) +
-    guides(fill = guide_legend(title = "Model")) +
-    custom_theme
+#model_ranks_plot_interacting <- model_ranks %>%
+#    filter(observed) %>%
+#    ggplot(aes(x = rank, fill = model)) +
+#    geom_bar(position = "fill") +
+#    labs(x = "Rank", y = "Proportion") +
+#    scale_fill_manual(values = model_colors, labels = model_labels) +
+#    guides(fill = guide_legend(title = "Model")) +
+#    custom_theme
 
-# HIstogram with specialization assymetry for top two models
+# Histogram with specialization assymetry for top two models
 assymetry_hist <- model_ranks %>%
     filter(model %in% c("C2_L0", "C2_L1") & rank == 1 & observed) %>%
-    mutate(model = factor(model, levels = c("C2_L1", "C2_L0"))) %>% # Reorder levels
+    mutate(model = factor(model, levels = c("C2_L1", "C2_L0"))) %>%
     ggplot(aes(x = assymetry, fill = model)) +
     geom_histogram(position = "identity", alpha = 0.8, bins = 15) +
-    labs(x = "Assymetry", y = "Count") +
+    labs(x = "Specialization assymetry", y = "No. of pairs") +
     scale_fill_manual(
         values = c("C2_L0" = "#8A708A", "C2_L1" = "#C3B8C3"),
         labels = c("C2_L0" = "Model C2_L0", "C2_L1" = "Model C2_L1")
     ) +
-    guides(fill = guide_legend(title = "Model")) +
+    guides(fill = guide_legend(title = "Best model")) +
+    geom_vline(data = model_ranks %>%
+                       filter(model %in% c("C2_L0", "C2_L1") & rank == 1 & observed) %>%
+                       group_by(model) %>%
+                       summarize(median_assymetry = median(assymetry)),
+                   aes(xintercept = median_assymetry, color = model),
+                   linetype = "dashed", size = 0.75) +
+        scale_color_manual(
+            values = c("C2_L0" = "#8A708A", "C2_L1" = "#C3B8C3"),
+            labels = c("C2_L0" = "Model C2_L0", "C2_L1" = "Model C2_L1")
+        ) +
+    guides(color = "none") +
     custom_theme
 
-
-
-
-
-# Save the plot as a PDF
-ggsave("fig.pdf", width = 12, height = 9, units = "cm")
-
-# Hiistogram of the percent likelihood gain
-likelihood_gain %>%
-    ggplot(aes(x = percent_likelihood_gain)) +
-    geom_histogram(binwidth = 5, fill = "gray70") +
-    labs(x = "% likelihood gain model 2 vs model 1", y = "Frequency") +
+# Most pairs that do not interact never cooccur
+cooccurring_sites_hist <- pairs_data_summary %>%
+    ggplot(aes(x = cooccurring_sites, fill = observed)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 45) +
+    labs(x = "Number of cooccurring sites", y = "No. of pairs") +
+    scale_fill_manual(values = c("TRUE" = "gray25", "FALSE" = "gray70"), labels = c("TRUE" = "Observed", "FALSE" = "Not observed")) +
+    guides(fill = guide_legend(title = "Interaction")) +
     custom_theme
 
-# Save the plot as a PDF
-ggsave("fig2.pdf", width = 12, height = 8)
-
-
-# Give me the records in DF_split$`Peltigeraaffcastanea sppcomplex31a` for which Xij = 1
-DF_split$`Peltigeraaffcollina III`[DF_split$`Peltigeraaffcollina III`$Xij == 1,]
-
-
-
+# Save the plots as a PDF
+ggsave(model_ranks_plot, filename = "documents/plots/model_ranks_plot.pdf",
+    width = 12, height = 9, units = "cm")
+ggsave(model_ranks_plot_weighted, filename = "documents/plots/model_ranks_plot_weighted.pdf",
+    width = 12, height = 9, units = "cm")
+#ggsave(model_ranks_plot_interacting, filename = "documents/plots/model_ranks_plot_interacting.pdf",
+#    width = 12, height = 9, units = "cm")
+ggsave(assymetry_hist, filename = "documents/plots/assymetry_hist.pdf",
+    width = 12, height = 9, units = "cm")
+ggsave(cooccurring_sites_hist, filename = "documents/plots/cooccurring_sites_hist.pdf",
+    width = 12, height = 9, units = "cm")
 
 
 ##### EXAMPLE PAIR #####
@@ -227,16 +323,17 @@ for(x in 1:length(DF_split)) {
 cbind(nL,nXi,nXj,nXij,nL,nL/nXij)[nL/nXij<0.7 & nL > 10,]
 
 # Subset the data
-pair_index = which(nL == 36 & nXij == 68) 
+pair_index = which(nL == 36 & nXij == 54) 
 data = DF_split[[pair_index]]
 #data$E = data.frame(T = data$E$T/12, PP = data$E$PP/1000, T2 = data$E$T2/12^2, PP2 = data$E$PP2/1000^2)
 sum(data$Lij)
 sum(data$Xij)
 
 # Specify the environmental variables
-Enames = c("T","T2","PP","PP2")
+Enames = c("MAT")
 
 # Pick the model
+models_C0_L1 = fit_models(data, selection = FALSE, funC = C0, funL = L1, Enames)
 models_C2_L0 = fit_models(data, selection = FALSE, funC = C2, funL = L0, Enames)
 models_C2_L1 = fit_models(data, selection = FALSE, funC = C2, funL = L1, Enames)
 models_C2_L2 = fit_models(data, selection = FALSE, funC = C2, funL = L2, Enames)
@@ -245,6 +342,7 @@ models_C1_L2 = fit_models(data, selection = FALSE, funC = C1, funL = L2, Enames)
 models_C3_L2 = fit_models(data, selection = FALSE, funC = C3, funL = L2, Enames)
 
 # Compute the LL
+LL_C0_L1 = get_LL(models_C0_L1, data)
 LL_C2_L0 = get_LL(models_C2_L0, data)
 LL_C2_L1 = get_LL(models_C2_L1, data)
 LL_C2_L2 = get_LL(models_C2_L2, data)
@@ -254,6 +352,7 @@ LL_C3_L2 = get_LL(models_C3_L2, data)
 
 # Collect the results
 LL = c(
+    LL_C0_L1[1],
 	LL_C2_L0[1],
 	LL_C2_L1[1],
 	LL_C2_L2[1],
@@ -263,6 +362,7 @@ LL = c(
 	)
 
 npars = c(
+    LL_C0_L1[2],
 	LL_C2_L0[2],
 	LL_C2_L1[2],
 	LL_C2_L2[2],

@@ -66,6 +66,47 @@ The script will also generate `analyses/ecology/peltigera_module_assignments.RDa
 ```sh
 Rscript scripts/ecology/plot_module_maps.R
 ```
+## Testing the effect of cooccurrence and environmental variation on the realization of interactions
+
+### 
+
+### Spatial interaction modeling
+
+I will have to rethink how to use (if at all). This is the approach from [Gravel et al. (2019)](https://doi.org/10.1111/ecog.04006). The idea is to formalize the probability of observing an interaction between a pair of symbionts (i,j) at site y as a joint probability of two events conditional on the environmental conditions: 
+
+-The probability of cooccurrence given the environmental conditions P(Xiy, Xjy | Ey) 
+-The probability of interaction given cooccurrence and the environmental conditions P(Lijy | Xiy, Xjy Ey)
+
+By using different expressions of these two terms, we can test hypothesis about the spatial mechanisms driving pairing in the network. We used four variants of the cooccurrence term and three variants of the interaction term (Table SX1) to produce six different models (Table SX2) that we fitted to our dataset.
+
+***Table SX1***
+
+Term    Label   expression variant  interpretation
+Coocurrence C0  P(Xiy, Xjy) cooccurrence independent of E, i.e., constant across landscape without assuming independence between species
+Coocurrence C1  P(Xiy) P(Xjy)   cooccurrence independent of E and independent between species
+Coocurrence C2  P(Xiy, Xjy | Ey)    cooccurrence depdendent of E and without assuming independence between species
+Coocurrence C3  P(Xiy|Ey) P(Xjy|Ey) cooccurrence dependent of E and independent between species
+Interaction L0  P(Lijy)  deterministic, i.e., always 1 (if they interact whenever they cooccur) or always 0 (if they never interact)
+Interaction L1  P(Lijy | Xiy, Xjy)  probabilistic, dependence only cooccurrence
+Interaction L2  P(Lijy | Xiy, Xjy, Ey)  probabilistic, depends on both cooccurrence and E.
+
+***Table SX2***
+
+Label   Coocurrence term    interaction term
+C0_L2   P(Xiy, Xjy) P(Lijy | Xiy, Xjy)
+C1_L2   P(Xiy) P(Xjy) P(Lijy | Xiy, Xjy)
+C2_L0   P(Xiy, Xjy | Ey) P(Lijy)
+C2_L1   P(Xiy, Xjy | Ey) P(Lijy | Xiy, Xjy)
+C2_L2   P(Xiy, Xjy | Ey) P(Lijy | Xiy, Xjy, Ey)
+C3_L2   P(Xiy|Ey) P(Xjy|Ey) P(Lijy | Xiy, Xjy, Ey)
+
+To evaluate the fit of the models, we generated a binary table where, for each site y, we recorded the observation of each species, Xiy and Xjy, their co-occurrence, Xijy, the observation of an interaction Lijy, and environmental co-variates Ey (Table X3 - this is an example of what the table looks like). Then, for each symbiont pair, we fitted the six model combinations (Table SX2) generalized linear models with a binomial error distribution and logit link function. We used the predicted probabilities to compute the likelihood of each observation given each model. 
+
+```sh
+sh scripts/ecology/interaction_modeling.R
+```
+
+This is currently set up to fir to all pairs that cooccur at least once. The problem is that for most pairs there doesn't seem to be enought data to detect the effect the effect of the environment on cooccurrence, let alone on interactions. I have to get back tot his and determine if it's worth doing the fitting on a subset of the most common pairs as a complement to other analyses.
 
 ### Plots of symbiont section trees
 
