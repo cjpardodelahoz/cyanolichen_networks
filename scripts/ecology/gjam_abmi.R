@@ -11,40 +11,8 @@ library(cowplot)
 
 ##### PREP ABMI CDM #####
 
-# Load ABMI extra dataset
-abmi_extra_data <- read_csv("documents/tables/abmi_extra_voucher.csv") %>%
-    # Add ABMI_ prefix to the Site column
-    mutate(site = paste0("ABMI_", site),
-            abmi_id = as.numeric(abmi_id)) %>%
-    # Remove underscores and periods from the mycobiont_molecular_id, subclade, section, and species_complex columns
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "_", "")) %>%
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "\\.", "")) %>%
-    mutate(subclade = str_replace_all(subclade, "_", "")) %>%
-    mutate(section = str_replace_all(section, "_", "")) %>%
-    mutate(section = str_replace_all(section, "\\.", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "_", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "\\.", ""))
-
-# Load ABMI ID dataset from Pardo-De la Hoz et al. (2024)-Data S1C
-abmi_id_data <- read_csv("data/tables/nostoc_datas1c.csv") %>% 
-    select(1:Collector) %>%
-    # Rename column names as lower case and replace spaces with underscores
-    rename_all(tolower) %>%
-    rename_all(~str_replace_all(., " ", "_")) %>%
-    # Merge ABMI ID data with ABMI extra data
-    bind_rows(abmi_extra_data) %>%
-    # Replace spaces and remove periods from Mycobiont_molecular_ID column with underscores
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, " ", "")) %>%
-    mutate(mycobiont_molecular_id = str_replace_all(mycobiont_molecular_id, "\\.", "")) %>%
-    # Remove spaces and periods from section and species_complex columns with underscores
-    mutate(section = str_replace_all(section, " ", "")) %>%
-    mutate(section = str_replace_all(section, "\\.", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, " ", "")) %>%
-    mutate(species_complex = str_replace_all(species_complex, "\\.", "")) %>%
-    # Coalesce the columns phylogroup and species complex into a new column called "nostoc_otu"
-    mutate(nostoc_otu = coalesce(phylogroup, species_complex)) %>%
-    # Generate a site_year column by concatenating the site and year columns
-    mutate(site_year = paste(str_replace(site, " ", "_"), year, sep = "_"))
+# Load ABMI ID data
+abmi_id_data <- read_csv("data/tables/abmi_id_data.csv")
 
 # Convert ABMI ID data to Nostoc community data matrix
 abmi_nostoc_cdm <- abmi_id_data %>%
@@ -91,28 +59,26 @@ abmi_cdm <- abmi_nostoc_cdm %>%
     # Filter Saskatchewan sites
     filter(!str_detect(site_year, "SK")) %>%
     # Make the site_year column the row names
-    column_to_rownames("site_year")
+    column_to_rownames("site_year") #%>%
+    #mutate_all(~ if_else(. > 0, 1, 0))
 
 # Get list of sites included in the CDM
 cdm_sites <- rownames(abmi_cdm)
 
 # Trim the CDM
-abmi_cdm_trimmed <- as.data.frame(gjamTrimY(abmi_cdm, minObs = 40)$y)
+abmi_cdm_trimmed <- as.data.frame(gjamTrimY(abmi_cdm, minObs = 30)$y)
 abmi_cdm_trimmed <- sapply(abmi_cdm_trimmed, as.numeric)
 abmi_cdm_trimmed <- as.data.frame(abmi_cdm_trimmed)
 
 
 ##### PREP ABMI SITE DATA #####
 
-load("data/r_datasets/abmi_north_south_quad.Rdata")
-
-rownames(d_qha.all) <- NULL
-
-abmi_site_data <- d_qha.all %>%
-    # Add "ABMI_" prefix to the SiteYear column
-    mutate(SiteYear = paste0("ABMI_", SiteYear)) %>%
-    # Filter QUAD to NE
-    filter(QUAD == "NE") %>%
+# Load ABMI site data and format for GJAM
+abmi_site_data <- read_csv("data/tables/abmi_site_data.csv") %>%
+    # Convert to missing for vegetation type
+    mutate(vegetation_type = as.factor(if_else(
+                str_detect(vegetation_type, "deciduous|non-treed|conifer"), 
+                    vegetation_type, NA))) %>%
     # Filter to sites included in the CDM
     filter(SiteYear %in% cdm_sites) %>%
     # Ensure SiteYear is ordered the same as in the CDM
@@ -123,15 +89,12 @@ abmi_site_data <- d_qha.all %>%
     rename(DDA18 = DD18, DDB18 = DD_18) %>%
     # Remove underscores from column names
     rename_all(~str_replace_all(., "_", ""))
-
-# Which sites are included in the CDM but not in the site data?
-#sites_not_in_site_data <- setdiff(cdm_sites, rownames(abmi_site_data))
-
+    
 
 ##### SET UP MODEL AND RUN gJAM #####
 
 # Set up the formula for the model
-formula1 <- as.formula(~ Elevation + MWMT + MCMT + MSP)
+formula1 <- as.formula(~ Elevation + MAT + MAP + proportionconifer)
 
 # Set 𝑁 and 𝑟 for dimension reduction. 𝑁 is the potential number of response groups, and 𝑟 is the dimensionality (AKA flexibility) of those groups. 
 # 𝑟 must be smaller than 𝑁 , which should be much smaller than the number of species 𝑆
@@ -163,13 +126,14 @@ prior <- gjamPriorTemplate(formula = formula1,
 #                    values = rep(1, nrow(abmi_cdm_trimmed)))
 
 # Set up the model and run parameters
-mlist <- list(ng=40000, burnin=20000, typeNames = 'DA', betaPrior = prior, reductList = rlist)
+mlist <- list(ng=40000, burnin=10000, typeNames = 'DA', betaPrior = prior, reductList = rlist)
 
 # Run the model
-out <- gjam(formula1, xdata = abmi_site_data, ydata = abmi_cdm_trimmed, modelList = mlist)
+set.seed(10403)
+out1 <- gjam(formula1, xdata = abmi_site_data, ydata = abmi_cdm_trimmed, modelList = mlist)
 
 # Plot the results
-gjamPlot(output = out, plotPars = list(PLOTALLY = T, SAVEPLOTS = T, outfolder = "./"))
+gjamPlot(output = out1, plotPars = list(PLOTALLY = T, SAVEPLOTS = T, outfolder = "./"))
 
 out$fit$rmspeAll
 out$fit$DIC
@@ -198,3 +162,89 @@ hold <- out$modelList$holdoutIndex    # holdout observations (rows)
 plot(out$inputs$xUnstand[hold,-1],xMu[hold,-1], cex=.2, xlab='True', ylab='Predictive mean')
 title('holdouts in x')
 abline( 0, 1, lty=2 )
+
+
+
+###### VARIANCE PARTITIONING ######
+
+# Extract parameters from GJAM output
+residual_covariance <- out1[["parameters"]][["sigMu"]]  # Residual covariance matrix (S x S)
+predictor_coefficients <- out1[["parameters"]][["betaMu"]]  # Beta coefficients (Q x S)
+predictor_covariance <- cov(out1[["inputs"]][["xUnstand"]])  # Covariance of predictors (Q x Q)
+
+# Number of species
+species_names <- colnames(out1[["prediction"]][["ypredMu"]])
+num_species <- length(species_names)
+
+# Initialize an empty results table
+variance_partitioning_table <- data.frame(
+  Species = species_names,
+  Total_Variance = numeric(num_species),
+  Fraction_Explained_By_Environment = numeric(num_species),
+  Fraction_Residual_Covariance = numeric(num_species)
+)
+
+# Compute variance components for each species
+for (s in seq_len(num_species)) {
+  # Environmental variance for species s: b_s^T * V * b_s
+  beta_vector <- predictor_coefficients[, s]  # Coefficients for species s (Q x 1)
+  environmental_variance <- sum(beta_vector %*% predictor_covariance %*% beta_vector)
+  
+  # Residual variance for species s: diagonal element of residual covariance
+  residual_variance <- residual_covariance[s, s]
+  
+  # Total variance
+  total_variance <- environmental_variance + residual_variance
+  
+  # Update the results table
+  variance_partitioning_table$Total_Variance[s] <- total_variance
+  variance_partitioning_table$Fraction_Explained_By_Environment[s] <- environmental_variance / total_variance
+  variance_partitioning_table$Fraction_Residual_Covariance[s] <- residual_variance / total_variance
+}
+
+
+
+
+###### SARAH CODE ######
+
+load("out_full_CPUE_fall.RData")
+
+out <- out1
+
+sigMu <- out[["parameters"]][["sigMu"]]
+sensBeta <- out[["parameters"]][["sensBeta"]]
+
+sensMu <- cbind(sensMu, sensBeta[,1])
+sensSe <- cbind(sensSe, sensBeta[,1])
+colnames(sensMu)[ncol(sensMu)] <- colnames(sensSe)[ncol(sensMu)] <- 'beta'
+
+        
+        
+        sigma <- sqrt( diag( sigMu )) #sensBeta on sd scale
+        sens  <- cbind(sensMu, sigma)
+        
+        sens <- sens^2
+        
+        sprop <- sweep( sens, 1, rowSums(sens), '/')
+        ord <- order(sprop[,2], decreasing = T)
+        
+        smu <- t(sprop[ord,])
+       
+        
+names <- colnames(out[["prediction"]][["ypredMu"]])
+smu2 <- t(smu)  
+    smu2 <- as.data.frame(smu2) 
+    smu2$snames <- rownames(smu2)
+    specs <- as.data.frame(names)
+    colnames(specs) <- c("snames")
+    smu2 <- left_join(smu2, specs, by = c("snames"))
+    
+ 
+#Plot 
+    smu3 <- t(smu2)
+    colnames(smu3) <- smu2$specs
+        smax <- max( colSums(smu) )
+        tmp0 <- barplot( smu, beside = F, xaxt = 'n',
+                        ylim = c(-.5, smax), ylab = 'Proportion of total variance' )
+        tmp0
+        text( tmp0 - .2*diff(tmp0)[1], -.1, colnames(smu), srt = 90, pos = 1, cex=.6, col = as.vector(smu2$specColor))

@@ -66,9 +66,16 @@ The script will also generate `analyses/ecology/peltigera_module_assignments.RDa
 ```sh
 Rscript scripts/ecology/plot_module_maps.R
 ```
-## Testing the effect of cooccurrence and environmental variation on the realization of interactions
+## Drivers of regional network structure
 
-### 
+### Estimating species' responses to environmental variation with GJAM
+
+
+
+
+### Module spatial overlap vs connectivity
+
+
 
 ### Spatial interaction modeling
 
