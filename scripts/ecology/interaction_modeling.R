@@ -4,7 +4,9 @@
 
 # Load the required libraries
 library(tidyverse)
-# Load some functions
+library(ggnewscale)
+
+# Load model functions
 source("scripts/ecology/gravel2019_functions/species_models.r")
 source("scripts/ecology/gravel2019_functions/interactions_models.r")
 source("scripts/ecology/gravel2019_functions/get_LL.r")
@@ -53,11 +55,19 @@ pairs_data <- expand_grid(IDi = unique(abmi_id_data$mycobiont_molecular_id),
     #filter(sum(Xij) > 0) %>%
     #ungroup()
 
-# Pair data for pairs that cooccur at least once
+# Pair data for pairs that cooccur at least 10 times
 pairs_data_cooccur <- pairs_data %>%
     group_by(IDi, IDj) %>%
     filter(sum(Xij) > 10) %>%
     ungroup()
+
+# Pairs that cooccur at least 20 times and interact at least once
+pairs_cooccur_20 <- pairs_data %>%
+    group_by(IDi, IDj) %>%
+    filter(sum(Xij) > 20 & sum(Lij) > 1) %>%
+    ungroup() %>%
+    select(IDi, IDj) %>%
+    distinct()
 
 # Pairs that interact every time they cooccur
 model_force <- pairs_data_cooccur %>%
@@ -124,7 +134,7 @@ edata <- pairs_data_cooccur %>%
 #    filter(is.na(T) | is.na(PP))
 
 
-##### JOIN E AND SPLIT BY PAIRS #####
+##### JOIN PAIR AND ENVIRONMENTAL DATA AND SPLIT BY PAIRS #####
 
 # Join pair and climate data
 DF <- as.data.frame(pairs_data_cooccur)
@@ -135,38 +145,106 @@ pairs_ID <- as.factor(paste(DF$IDi,DF$IDj))
 DF_split <- split(DF,pairs_ID)
 
 # Examine specifc pairs in DF_split
-#DF_split$`Peltigeraleucophlebia6 XXXIII`[DF_split$`Peltigeraleucophlebia6 XXXIII`$Xij == 1,] 
+DF_split$`Peltigeraextenuata1 sppcomplex31a`[DF_split$`Peltigeraextenuata1 sppcomplex31a`$Xi == 1,] 
 
 
-
-##### FIT MODELS FOR ALL PAIRS #####
+##### FIT MODELS FOR ALL PAIRS AND SUMMARIZE RESULTS #####
 
 #DF_split <- DF_split[c(806, 913)]
+
 # Specify the environmental variables
-Enames = c("MAT"#,
+#Enames = c(#"MAT"#,
             #"MAT2",
             #"MAP"#,
             #"MAP2"#, 
             #"mean_canopy_closure"#, 
             #"Elevation"#, 
             #"proportion_conifer"
-            )
+            #)
+Enames_MAT <- c("MAT")
+Enames_MAP <- c("MAP")
+Enames_proportion_conifer <- c("proportion_conifer")
+Enames_elevation <- c("Elevation")
 
 # Fit all models to all pairs
-fit_result <- fit_all_pairs(DF_split, Enames)
+#fit_result <- fit_all_pairs(DF_split, Enames)
+fit_result_MAT <- fit_all_pairs(DF_split, Enames_MAT)
+fit_result_MAP <- fit_all_pairs(DF_split, Enames_MAP)
+fit_result_proportion_conifer <- fit_all_pairs(DF_split, Enames_proportion_conifer)
+fit_result_elevation <- fit_all_pairs(DF_split, Enames_elevation)
 
 # Summarize the results across all pairs
-full_fit_summary <- fit_result %>%
+#full_fit_summary <- fit_result %>%
+#    group_by(model) %>%
+#    summarize(LL = sum(LL),
+#              npars = sum(npars),
+#              AIC = -2 * LL + 2 * npars)
+full_fit_summary_MAT <- fit_result_MAT %>%
+    group_by(model) %>%
+    summarize(LL = sum(LL),
+              npars = sum(npars),
+              AIC = -2 * LL + 2 * npars)
+full_fit_summary_MAP <- fit_result_MAP %>%
+    group_by(model) %>%
+    summarize(LL = sum(LL),
+              npars = sum(npars),
+              AIC = -2 * LL + 2 * npars)
+full_fit_summary_proportion_conifer <- fit_result_proportion_conifer %>%
+    group_by(model) %>%
+    summarize(LL = sum(LL),
+              npars = sum(npars),
+              AIC = -2 * LL + 2 * npars)
+full_fit_summary_elevation <- fit_result_elevation %>%
     group_by(model) %>%
     summarize(LL = sum(LL),
               npars = sum(npars),
               AIC = -2 * LL + 2 * npars)
 
 # Write the full fit summary to a CSV file
-write_csv(fit_summary, "documents/tables/model_fit_summary.csv")
+#write_csv(full_fit_summary, "documents/tables/model_fit_summary.csv")
+write_csv(full_fit_summary_MAT, "documents/tables/model_fit_summary_MAT.csv")
+write_csv(full_fit_summary_MAP, "documents/tables/model_fit_summary_MAP.csv")
+write_csv(full_fit_summary_proportion_conifer, "documents/tables/model_fit_summary_proportion_conifer.csv")
+write_csv(full_fit_summary_elevation, "documents/tables/model_fit_summary_elevation.csv")
 
 # Rank models by AIC - Force ties between C2_L0 and C2_L1 to to score the best model as C2_L0
-model_ranks <- fit_result %>%
+#model_ranks <- fit_result %>%
+#    group_by(mycobiont, nostoc) %>%
+#    mutate(rank = min_rank(AIC)) %>%
+#    ungroup() %>%
+#    left_join(model_force, by = c("mycobiont" = "IDi", "nostoc" = "IDj"), suffix = c("", "_tied")) %>%
+#    mutate(rank = if_else(!is.na(coo) & model == "C2_L0", 1, rank),
+#            rank = if_else(!is.na(coo) & model == "C2_L1", 2, rank)) %>%
+#    select(-coo, -inter) %>%
+#    left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+model_ranks_MAT <- fit_result_MAT %>%
+    group_by(mycobiont, nostoc) %>%
+    mutate(rank = min_rank(AIC)) %>%
+    ungroup() %>%
+    left_join(model_force, by = c("mycobiont" = "IDi", "nostoc" = "IDj"), suffix = c("", "_tied")) %>%
+    mutate(rank = if_else(!is.na(coo) & model == "C2_L0", 1, rank),
+            rank = if_else(!is.na(coo) & model == "C2_L1", 2, rank)) %>%
+    select(-coo, -inter) %>%
+    left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+model_ranks_MAP <- fit_result_MAP %>%
+    group_by(mycobiont, nostoc) %>%
+    mutate(rank = min_rank(AIC)) %>%
+    ungroup() %>%
+    left_join(model_force, by = c("mycobiont" = "IDi", "nostoc" = "IDj"), suffix = c("", "_tied")) %>%
+    mutate(rank = if_else(!is.na(coo) & model == "C2_L0", 1, rank),
+            rank = if_else(!is.na(coo) & model == "C2_L1", 2, rank)) %>%
+    select(-coo, -inter) %>%
+    left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+model_ranks_proportion_conifer <- fit_result_proportion_conifer %>%
+    group_by(mycobiont, nostoc) %>%
+    mutate(rank = min_rank(AIC)) %>%
+    ungroup() %>%
+    left_join(model_force, by = c("mycobiont" = "IDi", "nostoc" = "IDj"), suffix = c("", "_tied")) %>%
+    mutate(rank = if_else(!is.na(coo) & model == "C2_L0", 1, rank),
+            rank = if_else(!is.na(coo) & model == "C2_L1", 2, rank)) %>%
+    select(-coo, -inter) %>%
+    left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+model_ranks_elevation <- fit_result_elevation %>%
     group_by(mycobiont, nostoc) %>%
     mutate(rank = min_rank(AIC)) %>%
     ungroup() %>%
@@ -176,6 +254,62 @@ model_ranks <- fit_result %>%
     select(-coo, -inter) %>%
     left_join(pairs_data_cooccur_summary, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
 
+# Load module assignments
+load("analyses/ecology/peltigera_module_assignments.RData")
+peltigera_module_assignments <- mutate(peltigera_module_assignments, 
+    module = factor(as.character(module)))
+nostoc_module_assignments <- mutate(nostoc_module_assignments, 
+    module = factor(as.character(module)))
+
+# Table for delta AIC plot comparing C2_L1 to C2_L2
+#delta_aic_table <- model_ranks %>%
+#    filter(model %in% c("C2_L1", "C2_L2")) %>%
+#    group_by(mycobiont, nostoc) %>%
+#    summarize(delta_aic = AIC[model == "C2_L2"] - AIC[model == "C2_L1"]) %>%
+#    ungroup() %>%
+#    right_join(pairs_cooccur_20, by = c("mycobiont" = "IDi", "nostoc" = "IDj"))
+delta_aic_table_MAT <- model_ranks_MAT %>%
+    filter(model %in% c("C2_L1", "C2_L2")) %>%
+    group_by(mycobiont, nostoc) %>%
+    summarize(delta_aic = AIC[model == "C2_L2"] - AIC[model == "C2_L1"]) %>%
+    ungroup() %>%
+    right_join(pairs_cooccur_20, by = c("mycobiont" = "IDi", "nostoc" = "IDj")) %>%
+    left_join(peltigera_module_assignments, by = c("mycobiont" = "mycobiont_molecular_id")) %>%
+    left_join(nostoc_module_assignments, by = c("nostoc" = "nostoc_otu"))
+delta_aic_table_MAP <- model_ranks_MAP %>%
+    filter(model %in% c("C2_L1", "C2_L2")) %>%
+    group_by(mycobiont, nostoc) %>%
+    summarize(delta_aic = AIC[model == "C2_L2"] - AIC[model == "C2_L1"]) %>%
+    ungroup() %>%
+    right_join(pairs_cooccur_20, by = c("mycobiont" = "IDi", "nostoc" = "IDj")) %>%
+    left_join(peltigera_module_assignments, by = c("mycobiont" = "mycobiont_molecular_id")) %>%
+    left_join(nostoc_module_assignments, by = c("nostoc" = "nostoc_otu"))
+delta_aic_table_proportion_conifer <- model_ranks_proportion_conifer %>%
+    filter(model %in% c("C2_L1", "C2_L2")) %>%
+    group_by(mycobiont, nostoc) %>%
+    summarize(delta_aic = AIC[model == "C2_L2"] - AIC[model == "C2_L1"]) %>%
+    ungroup() %>%
+    right_join(pairs_cooccur_20, by = c("mycobiont" = "IDi", "nostoc" = "IDj")) %>%
+    left_join(peltigera_module_assignments, by = c("mycobiont" = "mycobiont_molecular_id")) %>%
+    left_join(nostoc_module_assignments, by = c("nostoc" = "nostoc_otu"))
+delta_aic_table_elevation <- model_ranks_elevation %>%
+    filter(model %in% c("C2_L1", "C2_L2")) %>%
+    group_by(mycobiont, nostoc) %>%
+    summarize(delta_aic = AIC[model == "C2_L2"] - AIC[model == "C2_L1"]) %>%
+    ungroup() %>%
+    right_join(pairs_cooccur_20, by = c("mycobiont" = "IDi", "nostoc" = "IDj")) %>%
+    left_join(peltigera_module_assignments, by = c("mycobiont" = "mycobiont_molecular_id")) %>%
+    left_join(nostoc_module_assignments, by = c("nostoc" = "nostoc_otu"))
+
+# What fraction of pairs for which the best model is C2_L0 never interact? - 0.9069767
+#C2_L0_observed <- model_ranks %>%
+#    filter(model == "C2_L0" & rank == 1 & observed) %>%
+#    nrow()
+#C2_L0_unobserved <- model_ranks %>%
+#    filter(model == "C2_L0" & rank == 1 & !observed) %>%
+#    nrow()
+#C2_L0_unobserved / (C2_L0_observed + C2_L0_unobserved)
+
 # What are the best models for pairs that never interact?
 #model_ranks %>%
 #    filter(!observed) %>%
@@ -183,16 +317,6 @@ model_ranks <- fit_result %>%
 #    summarize(best_model = model[rank == 1]) %>%
 #    pull(best_model) %>%
 #    unique()
-
-# What fraction of pairs for which the best model is C2_L0 never interact? - 0.9376147
-C2_L0_observed <- model_ranks %>%
-    filter(model == "C2_L0" & rank == 1 & observed) %>%
-    nrow()
-C2_L0_unobserved <- model_ranks %>%
-    filter(model == "C2_L0" & rank == 1 & !observed) %>%
-    nrow()
-C2_L0_unobserved / (C2_L0_observed + C2_L0_unobserved)
-    
 
 # Calculate the percent likelihood gain for the best model compared to the second-best model
 #likelihood_gain <- fit_result %>%
@@ -214,50 +338,90 @@ custom_theme <- theme(
     legend.text = element_text(color = "black", size = 12),
     legend.title = element_text(color = "black", size = 12)
     )
+custom_theme_1 <- theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_blank(), 
+    axis.text = element_text(color = "black", size = 7),
+    legend.text = element_text(color = "black", size = 7),
+    legend.title = element_text(color = "black", size = 7)
+    )
 
-# Custom colors for each model
-model_colors <- c("C0_L2" = "#8F6D4A", 
-                    "C1_L2" = "#CAB79E", 
-                    "C2_L0" = "#8A708A", 
-                    "C2_L1" = "#C3B8C3", 
-                    "C2_L2" = "#7D927A", 
-                    "C3_L2" = "#BFC8BC")
+# Define custom colors for the modules
+module_colors <- c("1" = "#8a708a", "2" = "#7e937b", "3" = "#3277b0", "4" = "#be8551", "6" = "gray20")
 
-# Custom labels for the legend
-model_labels <- c("C0_L2" = "Model C0_L2",
-                   "C1_L2" = "Model C1_L2",
-                   "C2_L0" = "Model C2_L0",
-                   "C2_L1" = "Model C2_L1",
-                   "C2_L2" = "Model C2_L2",
-                   "C3_L2" = "Model C3_L2")
-
-# Model ranks plot including all pairs
-model_ranks_plot <- model_ranks %>%
-    ggplot(aes(x = rank, fill = model)) +
-    geom_bar(position = "fill") +
-    labs(x = "Rank (best to worst)", y = "Proportion of pairs") +
-    scale_fill_manual(values = model_colors, labels = model_labels) +
-    guides(fill = guide_legend(title = "Model")) +
-    custom_theme
-
-# Model ranks plot weighted by pair regional frequency
-model_ranks_plot_weighted <- model_ranks %>%
-    ggplot(aes(x = rank, fill = model, weight = regional_frequency)) +
-    geom_bar(position = "fill") +
-    labs(x = "Rank (best to worst)", y = "Proportion of pairs weighted by regional freq.") +
-    scale_fill_manual(values = model_colors, labels = model_labels) +
-    guides(fill = guide_legend(title = "Model")) +
-    custom_theme
-
-# Model ranks plot including only pairs with at least one interaction
-#model_ranks_plot_interacting <- model_ranks %>%
-#    filter(observed) %>%
-#    ggplot(aes(x = rank, fill = model)) +
-#    geom_bar(position = "fill") +
-#    labs(x = "Rank", y = "Proportion") +
-#    scale_fill_manual(values = model_colors, labels = model_labels) +
-#    guides(fill = guide_legend(title = "Model")) +
+# Delta AIC plots comparing C2_L1 to C2_L2
+#delta_aic_plot <- delta_aic_table %>%
+#    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
+#    geom_bar(stat = "identity") +
+#    scale_fill_manual(values = c("TRUE" = "#8A708A", "FALSE" = "#C3B8C3"), guide = "none") +
+#    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+#    coord_flip() +
 #    custom_theme
+delta_aic_plot_MAT <- delta_aic_table_MAT %>%
+    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_MAT,
+            aes(y = -10, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_MAT,
+            aes(y = -9.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    scale_y_continuous(limits = c(-10.5, 4), breaks = seq(-8, 4, 2)) +
+    coord_flip() +
+    custom_theme_1
+delta_aic_plot_MAP <- delta_aic_table_MAP %>%
+    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_MAP,
+            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_MAP,
+            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+    coord_flip() +
+    custom_theme_1
+delta_aic_plot_proportion_conifer <- delta_aic_table_proportion_conifer %>%
+    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_proportion_conifer,
+            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_proportion_conifer,
+            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+    coord_flip() +
+    custom_theme_1
+delta_aic_plot_elevation <- delta_aic_table_elevation %>%
+    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_elevation,
+            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    new_scale_color() +
+    geom_point(data = delta_aic_table_elevation,
+            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+    scale_color_manual(values = module_colors, guide = "none") +
+    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+    coord_flip() +
+    custom_theme_1
 
 # Histogram with specialization assymetry for top two models
 assymetry_hist <- model_ranks %>%
@@ -293,13 +457,63 @@ cooccurring_sites_hist <- pairs_data_summary %>%
     guides(fill = guide_legend(title = "Interaction")) +
     custom_theme
 
+# Custom colors for each model
+#model_colors <- c("C0_L2" = "#8F6D4A", 
+#                    "C1_L2" = "#CAB79E", 
+#                    "C2_L0" = "#8A708A", 
+#                    "C2_L1" = "#C3B8C3", 
+#                    "C2_L2" = "#7D927A", 
+#                    "C3_L2" = "#BFC8BC")
+
+# Custom labels for the legend
+#model_labels <- c("C0_L2" = "Model C0_L2",
+#                   "C1_L2" = "Model C1_L2",
+#                   "C2_L0" = "Model C2_L0",
+#                   "C2_L1" = "Model C2_L1",
+#                   "C2_L2" = "Model C2_L2",
+#                   "C3_L2" = "Model C3_L2")
+
+# Model ranks plot including all pairs
+#model_ranks_plot <- model_ranks %>%
+#    ggplot(aes(x = rank, fill = model)) +
+#    geom_bar(position = "fill") +
+#    labs(x = "Rank (best to worst)", y = "Proportion of pairs") +
+#    scale_fill_manual(values = model_colors, labels = model_labels) +
+#    guides(fill = guide_legend(title = "Model")) +
+#    custom_theme
+
+# Model ranks plot weighted by pair regional frequency
+#model_ranks_plot_weighted <- model_ranks %>%
+#    ggplot(aes(x = rank, fill = model, weight = regional_frequency)) +
+#    geom_bar(position = "fill") +
+#    labs(x = "Rank (best to worst)", y = "Proportion of pairs weighted by regional freq.") +
+#    scale_fill_manual(values = model_colors, labels = model_labels) +
+#    guides(fill = guide_legend(title = "Model")) +
+#    custom_theme
+
+# Model ranks plot including only pairs with at least one interaction
+#model_ranks_plot_interacting <- model_ranks %>%
+#    filter(observed) %>%
+#    ggplot(aes(x = rank, fill = model)) +
+#    geom_bar(position = "fill") +
+#    labs(x = "Rank", y = "Proportion") +
+#    scale_fill_manual(values = model_colors, labels = model_labels) +
+#    guides(fill = guide_legend(title = "Model")) +
+#    custom_theme
+
 # Save the plots as a PDF
-ggsave(model_ranks_plot, filename = "documents/plots/model_ranks_plot.pdf",
-    width = 12, height = 9, units = "cm")
-ggsave(model_ranks_plot_weighted, filename = "documents/plots/model_ranks_plot_weighted.pdf",
-    width = 12, height = 9, units = "cm")
-#ggsave(model_ranks_plot_interacting, filename = "documents/plots/model_ranks_plot_interacting.pdf",
+#ggsave(model_ranks_plot, filename = "documents/plots/model_ranks_plot.pdf",
 #    width = 12, height = 9, units = "cm")
+#ggsave(model_ranks_plot_weighted, filename = "documents/plots/model_ranks_plot_weighted.pdf",
+#    width = 12, height = 9, units = "cm")
+ggsave(delta_aic_plot_MAT, filename = "documents/plots/delta_aic_mat.pdf",
+    width = 12, height = 12, units = "cm")
+ggsave(delta_aic_plot_MAP, filename = "documents/plots/delta_aic_map.pdf",
+    width = 12, height = 12, units = "cm")
+ggsave(delta_aic_plot_proportion_conifer, filename = "documents/plots/delta_aic_proportion_conifer.pdf",
+    width = 12, height = 12, units = "cm")
+ggsave(delta_aic_plot_elevation, filename = "documents/plots/delta_aic_elevation.pdf",
+    width = 12, height = 12, units = "cm")
 ggsave(assymetry_hist, filename = "documents/plots/assymetry_hist.pdf",
     width = 12, height = 9, units = "cm")
 ggsave(cooccurring_sites_hist, filename = "documents/plots/cooccurring_sites_hist.pdf",
