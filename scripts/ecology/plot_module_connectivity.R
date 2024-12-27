@@ -194,7 +194,7 @@ custom_theme <- theme(
 # Make a scatter plot of module connectivity and co-occurrence and color by process
 module_connectivity <- module_cooccurrence %>%
   ggplot(aes(x = cooccurrences, y = connectivity, color = process)) +
-  geom_point(size = 3) +
+  geom_point(size = 3, shape = 18) +
   scale_color_manual(values = c("env" = "#892b46", "other" = "gray50"),
                       labels = c("env" = "Modules C, D, and E", "other" = "Others")) +
   geom_line(data = module_cooccurrence %>% 
