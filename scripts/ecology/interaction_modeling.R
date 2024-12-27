@@ -351,77 +351,97 @@ custom_theme_1 <- theme(
 module_colors <- c("1" = "#8a708a", "2" = "#7e937b", "3" = "#3277b0", "4" = "#be8551", "6" = "gray20")
 
 # Delta AIC plots comparing C2_L1 to C2_L2
-#delta_aic_plot <- delta_aic_table %>%
-#    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
-#    geom_bar(stat = "identity") +
-#    scale_fill_manual(values = c("TRUE" = "#8A708A", "FALSE" = "#C3B8C3"), guide = "none") +
-#    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
-#    coord_flip() +
-#    custom_theme
+
+# Define the order of pairs based on delta_aic_plot_MAT
+pair_order <- delta_aic_table_MAT %>%
+  arrange(delta_aic) %>%
+  mutate(pair = paste(mycobiont, nostoc)) %>%
+  pull(pair)
+
+# Add the pair column to all tables
+delta_aic_table_MAT <- delta_aic_table_MAT %>%
+  mutate(pair = factor(paste(mycobiont, nostoc), levels = pair_order))
+
+delta_aic_table_MAP <- delta_aic_table_MAP %>%
+  mutate(pair = factor(paste(mycobiont, nostoc), levels = pair_order))
+
+delta_aic_table_proportion_conifer <- delta_aic_table_proportion_conifer %>%
+  mutate(pair = factor(paste(mycobiont, nostoc), levels = pair_order))
+
+delta_aic_table_elevation <- delta_aic_table_elevation %>%
+  mutate(pair = factor(paste(mycobiont, nostoc), levels = pair_order))
+
+# Plot for MAT
 delta_aic_plot_MAT <- delta_aic_table_MAT %>%
-    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
-    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_MAT,
-            aes(y = -10, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_MAT,
-            aes(y = -9.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    scale_y_continuous(limits = c(-10.5, 4), breaks = seq(-8, 4, 2)) +
-    coord_flip() +
-    custom_theme_1
+  ggplot(aes(x = pair, y = delta_aic, fill = delta_aic > 0)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+  labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_MAT,
+             aes(y = -10, x = pair, color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_MAT,
+             aes(y = -9.5, x = pair, color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  scale_y_continuous(limits = c(-10.5, 4), breaks = seq(-8, 4, 2)) +
+  coord_flip() +
+  custom_theme_1
+
+# Plot for MAP
 delta_aic_plot_MAP <- delta_aic_table_MAP %>%
-    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
-    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_MAP,
-            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_MAP,
-            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
-    coord_flip() +
-    custom_theme_1
+  ggplot(aes(x = pair, y = delta_aic, fill = delta_aic > 0)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+  labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_MAP,
+             aes(y = -4, x = pair, color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_MAP,
+             aes(y = -3.5, x = pair, color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+  coord_flip() +
+  custom_theme_1
+
+# Plot for Proportion Conifer
 delta_aic_plot_proportion_conifer <- delta_aic_table_proportion_conifer %>%
-    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
-    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_proportion_conifer,
-            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_proportion_conifer,
-            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
-    coord_flip() +
-    custom_theme_1
+  ggplot(aes(x = pair, y = delta_aic, fill = delta_aic > 0)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+  labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_proportion_conifer,
+             aes(y = -4, x = pair, color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_proportion_conifer,
+             aes(y = -3.5, x = pair, color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+  coord_flip() +
+  custom_theme_1
+
+# Plot for Elevation
 delta_aic_plot_elevation <- delta_aic_table_elevation %>%
-    ggplot(aes(x = reorder(paste(mycobiont, nostoc), delta_aic), y = delta_aic, fill = delta_aic > 0)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
-    labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_elevation,
-            aes(y = -4, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    new_scale_color() +
-    geom_point(data = delta_aic_table_elevation,
-            aes(y = -3.5, x = reorder(paste(mycobiont, nostoc), delta_aic), color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
-    scale_color_manual(values = module_colors, guide = "none") +
-    scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
-    coord_flip() +
-    custom_theme_1
+  ggplot(aes(x = pair, y = delta_aic, fill = delta_aic > 0)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("TRUE" = "#c7d19f", "FALSE" = "#aaa58d"), guide = "none") +
+  labs(x = "Pair", y = "Delta AIC (C2_L2 - C2_L1)") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_elevation,
+             aes(y = -4, x = pair, color = module.x), alpha = 0.85, shape = 17, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  new_scale_color() +
+  geom_point(data = delta_aic_table_elevation,
+             aes(y = -3.5, x = pair, color = module.y), alpha = 0.85, shape = 16, size = 1.9) +
+  scale_color_manual(values = module_colors, guide = "none") +
+  scale_y_continuous(limits = c(-4, 4), breaks = seq(-2, 4, 2)) +
+  coord_flip() +
+  custom_theme_1
 
 # Histogram with specialization assymetry for top two models
 assymetry_hist <- model_ranks %>%
