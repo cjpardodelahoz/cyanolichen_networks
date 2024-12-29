@@ -118,8 +118,13 @@ We included only symbiont pairs that cooccurred at least 10 times, and generated
 
 ### Estimating species' responses to environmental variation with GJAM
 
+We used GJAM to jointly model the distribution of Peltigera and Nostoc at the regional scale. As part of the model fitting, gjam estimates beta coefficients that represent the response of each taxon to the variation of environmental predictors included in the model. This way, we obtained posterior estimates of the responses to MAT, MAP, proportion of conifer land cover, and elevation (`documents/plots/ECOVARIATE_response_nostoc|peltigerac.pdf`). We also computed a PCA to visualize the similarities in environmental responses across taxa from different network modules (`documents/plots/env_response_pca.pdf`).
 
+```sh
+Rscript scripts/ecology/gjam_abmi.R
+```
 
+The model is data-hungry, so we only included taxa found in at least 30 sites. The script also writes the gjam output of the three chains to `analyses/ecology/gjam_output.RData`.
 
 ### Module spatial overlap vs connectivity
 
