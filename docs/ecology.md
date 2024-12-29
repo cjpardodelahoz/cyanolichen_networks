@@ -18,6 +18,13 @@ Then we will test predictions from the mechanisms inferred with the modeling, in
 
 Not sure exactly how, but we have to test how the responses to the process are similar (or different) between Nostoc and Peltigera. Maybe it's all about the size of the niche hypervolume. This could be linked to the relationship between specialization and abundance bullet up there...
 
+Evolutionary consequences
+
+-Sister species differentiate along environmental but not symbiotic axes. Two examples with similar potential symbionts and which share when cooccur but don't always cooccur:
+    - Peltigera leucophlebia 1 and Peltigera leucophlebia 2
+    - Phylogroups V and XLII
+    - Keep an eye out for malacea 2 vs malacea 5
+
 ## The regional dataset
 
 Include here a reference to the data clean-up:
@@ -66,7 +73,48 @@ The script will also generate `analyses/ecology/peltigera_module_assignments.RDa
 ```sh
 Rscript scripts/ecology/plot_module_maps.R
 ```
-## Drivers of regional network structure
+## Pairing mechanisms and drivers of network structure
+
+### Spatial interaction modeling
+
+This is the approach from [Gravel et al. (2019)](https://doi.org/10.1111/ecog.04006). The idea is to formalize the probability of observing an interaction between a pair of symbionts (i,j) at site y as a joint probability of two events conditional on the environmental conditions: 
+
+-The probability of cooccurrence given the environmental conditions P(Xiy, Xjy | Ey) 
+-The probability of interaction given cooccurrence and the environmental conditions P(Lijy | Xiy, Xjy Ey)
+
+By using different expressions of these two terms, we can test hypothesis about the spatial mechanisms driving pairing in the network. We used four variants of the cooccurrence term and three variants of the interaction term (Table SX1) to produce six different models (Table SX2) that we fitted to our dataset.
+
+***Table SX1***
+
+| Term        | Label | Expression Variant         | Interpretation                                                                 |
+|-------------|-------|----------------------------|---------------------------------------------------------------------------------|
+| Coocurrence | C0    | P(Xiy, Xjy)                | Cooccurrence independent of E, i.e., constant across landscape without assuming independence between species |
+| Coocurrence | C1    | P(Xiy) P(Xjy)              | Cooccurrence independent of E and independent between species                   |
+| Coocurrence | C2    | P(Xiy, Xjy | Ey)           | Cooccurrence dependent on E and without assuming independence between species    |
+| Coocurrence | C3    | P(Xiy|Ey) P(Xjy|Ey)        | Cooccurrence dependent on E and independent between species                     |
+| Interaction | L0    | P(Lijy)                    | Deterministic, i.e., always 1 (if they interact whenever they cooccur) or always 0 (if they never interact) |
+| Interaction | L1    | P(Lijy | Xiy, Xjy)         | Probabilistic, dependence only on cooccurrence                                  |
+| Interaction | L2    | P(Lijy | Xiy, Xjy, Ey)     | Probabilistic, depends on both cooccurrence and E                               |
+
+
+***Table SX2***
+
+| Label | Coocurrence term       | Interaction term                   |
+|-------|------------------------|------------------------------------|
+| C0_L2 | P(Xiy, Xjy)            | P(Lijy | Xiy, Xjy)                 |
+| C1_L2 | P(Xiy) P(Xjy)          | P(Lijy | Xiy, Xjy)                 |
+| C2_L0 | P(Xiy, Xjy | Ey)       | P(Lijy)                           |
+| C2_L1 | P(Xiy, Xjy | Ey)       | P(Lijy | Xiy, Xjy)                |
+| C2_L2 | P(Xiy, Xjy | Ey)       | P(Lijy | Xiy, Xjy, Ey)            |
+| C3_L2 | P(Xiy|Ey) P(Xjy|Ey)    | P(Lijy | Xiy, Xjy, Ey)            |
+
+To evaluate the fit of the models, we generated a binary table where, for each site y, we recorded the observation of each species, Xiy and Xjy, their co-occurrence, Xijy, the observation of an interaction Lijy, and environmental co-variates Ey (Table X3 - this is an example of what the table looks like). Then, for each symbiont pair, we fitted the six model combinations (Table SX2) generalized linear models with a binomial error distribution and logit link function. We used the predicted probabilities to compute the likelihood of each observation given each model and compared them using AIC. 
+
+```sh
+sh scripts/ecology/interaction_modeling.R
+```
+
+We included only symbiont pairs that cooccurred at least 10 times, and generated figures for pairs that cooccurred at least 20 times (to ensure there was enough data to rejrect the more complex models) and which interacted at least once (42 symbiotic pairs). The models were also fitted separately for each of four environmental covariates (MAT, MAP, proportion of conifer land cover, and elevation). The scripts generates plots comparing the fit for between models C2_L2 and C2_L1 across the four E covariates (`documents/plots/delta_aic_ECOVARIATE.pdf`) as well as tables with a summary of the fit across all included pairs for each E covariate (`documents/tables/model_fit_summary_ECOVARIATE.csv`).
 
 ### Estimating species' responses to environmental variation with GJAM
 
@@ -77,43 +125,6 @@ Rscript scripts/ecology/plot_module_maps.R
 
 
 
-### Spatial interaction modeling
-
-I will have to rethink how to use (if at all). This is the approach from [Gravel et al. (2019)](https://doi.org/10.1111/ecog.04006). The idea is to formalize the probability of observing an interaction between a pair of symbionts (i,j) at site y as a joint probability of two events conditional on the environmental conditions: 
-
--The probability of cooccurrence given the environmental conditions P(Xiy, Xjy | Ey) 
--The probability of interaction given cooccurrence and the environmental conditions P(Lijy | Xiy, Xjy Ey)
-
-By using different expressions of these two terms, we can test hypothesis about the spatial mechanisms driving pairing in the network. We used four variants of the cooccurrence term and three variants of the interaction term (Table SX1) to produce six different models (Table SX2) that we fitted to our dataset.
-
-***Table SX1***
-
-Term    Label   expression variant  interpretation
-Coocurrence C0  P(Xiy, Xjy) cooccurrence independent of E, i.e., constant across landscape without assuming independence between species
-Coocurrence C1  P(Xiy) P(Xjy)   cooccurrence independent of E and independent between species
-Coocurrence C2  P(Xiy, Xjy | Ey)    cooccurrence depdendent of E and without assuming independence between species
-Coocurrence C3  P(Xiy|Ey) P(Xjy|Ey) cooccurrence dependent of E and independent between species
-Interaction L0  P(Lijy)  deterministic, i.e., always 1 (if they interact whenever they cooccur) or always 0 (if they never interact)
-Interaction L1  P(Lijy | Xiy, Xjy)  probabilistic, dependence only cooccurrence
-Interaction L2  P(Lijy | Xiy, Xjy, Ey)  probabilistic, depends on both cooccurrence and E.
-
-***Table SX2***
-
-Label   Coocurrence term    interaction term
-C0_L2   P(Xiy, Xjy) P(Lijy | Xiy, Xjy)
-C1_L2   P(Xiy) P(Xjy) P(Lijy | Xiy, Xjy)
-C2_L0   P(Xiy, Xjy | Ey) P(Lijy)
-C2_L1   P(Xiy, Xjy | Ey) P(Lijy | Xiy, Xjy)
-C2_L2   P(Xiy, Xjy | Ey) P(Lijy | Xiy, Xjy, Ey)
-C3_L2   P(Xiy|Ey) P(Xjy|Ey) P(Lijy | Xiy, Xjy, Ey)
-
-To evaluate the fit of the models, we generated a binary table where, for each site y, we recorded the observation of each species, Xiy and Xjy, their co-occurrence, Xijy, the observation of an interaction Lijy, and environmental co-variates Ey (Table X3 - this is an example of what the table looks like). Then, for each symbiont pair, we fitted the six model combinations (Table SX2) generalized linear models with a binomial error distribution and logit link function. We used the predicted probabilities to compute the likelihood of each observation given each model. 
-
-```sh
-sh scripts/ecology/interaction_modeling.R
-```
-
-This is currently set up to fir to all pairs that cooccur at least once. The problem is that for most pairs there doesn't seem to be enought data to detect the effect the effect of the environment on cooccurrence, let alone on interactions. I have to get back tot his and determine if it's worth doing the fitting on a subset of the most common pairs as a complement to other analyses.
 
 ### Plots of symbiont section trees
 
