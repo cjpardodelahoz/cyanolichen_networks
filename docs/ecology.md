@@ -128,8 +128,11 @@ The model is data-hungry, so we only included taxa found in at least 30 sites. T
 
 ### Module spatial overlap vs connectivity
 
+If symbiotic pairing depends mostly on cooccurrence, then modules that cooccurr more often should be more connected. We quantified cooccurrence of core symbiotic pairs between modules and calculated pairwise module connectivity as the sum of edge weights between the two modules divided by the total edge weight of the network. We then visualized a plot of pairwise module connectivity vs. module cooccurrence `documents/plots/module_connectivity.pdf`.
 
-
+```sh
+Rscript scripts/ecology/plot_module_connectivity.R
+```
 
 ### Plots of symbiont section trees
 
