@@ -124,12 +124,16 @@ env_dna_codes_second_batch <- c(env_dna_codes_top$dna_code[385:480],  # env5
                                 env_dna_codes_top$dna_code[481:576],   # env6
                                 env_dna_codes_top$dna_code[577:672],  # env7
                                 env_dna_codes_top$dna_code[673:768])  # env8
+# Vector with dna codes from third batch of env samples (sequenced in the same run as lichen 16S) - 13 samples only
+env_dna_codes_third_batch <- c(env_dna_codes_top$dna_code[769:781])  # env9
 
 # Add dna codes to barcode tables
 first_batch_barcoded <- barcode_df %>%
     add_column(dna_code = env_dna_codes_first_batch)
 second_batch_barcoded <- barcode_df %>%
     add_column(dna_code = env_dna_codes_second_batch)
+third_batch_barcoded <- barcode_df[309:321, ] %>%
+    add_column(dna_code = env_dna_codes_third_batch)
 # Save barcode assignments for demultiplexing
 first_batch_barcoded %>%
   mutate(Barcode = paste(fwd_barcode_id, rev_barcode_id, sep = "--"),
@@ -145,7 +149,8 @@ second_batch_barcoded %>%
 # Join all metadata for top env samples
 
 # Compile barcode data from all batches
-all_batches_barcoded <- bind_rows(first_batch_barcoded, .id = "sequencing_batch") %>%
+all_batches_barcoded <- bind_rows(first_batch_barcoded, second_batch_barcoded, third_batch_barcoded,
+  .id = "sequencing_batch") %>%
   select(-c(plate_col, plate_row))
 # Join sequencing and env metadata
 env_top_metadata <- env_dna_codes_top %>%
