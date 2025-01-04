@@ -5,6 +5,7 @@
 
 # Load required packages
 library(tidyverse)
+library(RColorBrewer)
 library(devtools)
 library(SCRuB)
 library(vegan)
@@ -72,10 +73,13 @@ plot_nmds <- function(otu_table, labels = TRUE) {
         mutate(sample_type = case_when(str_detect(sample, "neg") ~ "neg",
             .default = str_extract(sample, "^[^_]+"))
         )
+    # Get custom color scale from the Paired palette
+    n_colors <- nmds_scores$sample_type %>% unique() %>% length()
+    palette <- colorRampPalette(brewer.pal(12, "Paired"))(n_colors)
     # Plot NMDS
     plot  <- ggplot(nmds_scores, aes(x = NMDS1, y = NMDS2, color = sample_type, size = total_reads_log)) +
         geom_point() +
-        scale_color_brewer(palette = "Paired") +
+        scale_color_manual(values = palette) +
         labs(x = "NMDS1", y = "NMDS2", size = "Log(Total reads)", color = "DNA source") +
         theme(legend.position = "right") +
         theme(legend.text = element_text(size = 24),
@@ -100,12 +104,13 @@ plot_nmds <- function(otu_table, labels = TRUE) {
 # Read the environmental seuqencing layout metadata
 metadata <- read_csv("documents/tables/env_top_metadata.csv")
 # Read the OTU table read_delim with first column as row names
-otu_table_raw <- read_delim(file = "analyses/environmental_sequencing/pacbio_env/unoise/counts/batch1_otutab.txt", delim = "\t") %>%
+otu_table_raw <- read_delim(file = "analyses/environmental_sequencing/pacbio_env/unoise/counts/batch123_otutab.txt", delim = "\t") %>%
     column_to_rownames("#OTU ID") %>%
     t() %>% 
     as.data.frame()
 # Remove samples with less than 7500 reads, unless they are negative controls
 otu_table <- otu_table_raw[rowSums(otu_table_raw) > 7500 | grepl("neg", rownames(otu_table_raw)), ]
+otu_table <- otu_table[!grepl("^PA", rownames(otu_table)), ]
 #rownames(otu_table)
 
 # Decontaminate
@@ -122,7 +127,7 @@ otu_table_strict <- otu_table[, !colnames(otu_table) %in% asvs_to_remove]
 # Subset OTU tables to include only Nostocales ASVs
 
 # Load the list of Nostocale ASVs
-nostocales_asvs <- scan("analyses/environmental_sequencing/pacbio_env/unoise/taxonomy/kraken/batch1_asvs_nostocales.txt", what = "character") %>%
+nostocales_asvs <- scan("analyses/environmental_sequencing/pacbio_env/unoise/taxonomy/kraken/batch123_asvs_nostocales.txt", what = "character") %>%
     str_remove(";.*")
 # Subset the OTU tables to only include Nostocales ASVs
 otu_table_scrub_nostocales <- otu_table_scrub %>% select(all_of(nostocales_asvs))
@@ -135,10 +140,8 @@ otu_table_scrub_nostocales <- otu_table_scrub_nostocales[rowSums(otu_table_scrub
 otu_table_strict_nostocales <- otu_table_strict_nostocales[rowSums(otu_table_strict_nostocales) > 500, colSums(otu_table_strict_nostocales) > 0]
 
 # NMDS for full community composition and Nostocales ASVs
-plot_nmds(otu_table_raw, labels = TRUE)
-ggsave("documents/plots/env_nmds_raw_plot.pdf")
 plot_nmds(otu_table, labels = TRUE)
-ggsave("documents/plots/env_nmds_filtered_plot.pdf")
+ggsave("documents/plots/env_nmds_filtered_plot1.pdf")
 plot_nmds(otu_table_scrub, labels = TRUE)
 ggsave("documents/plots/env_nmds_scrub_plot.pdf")
 plot_nmds(otu_table_strict, labels = TRUE)
@@ -147,3 +150,11 @@ plot_nmds(otu_table_scrub_nostocales, labels = TRUE)
 ggsave("documents/plots/env_nmds_scrub_nostocales_plot.pdf")
 plot_nmds(otu_table_strict_nostocales, labels = TRUE)
 ggsave("documents/plots/env_nmds_strict_nostocales_plot.pdf")
+
+########## WRITE OTU TABLES ##########
+
+# Remove negative controls from scrub OTU table
+otu_table_scrub <- otu_table_scrub[!grepl("neg", rownames(otu_table_scrub)), ]
+
+# Save the decontaminated OTU tables as .RData files
+save(otu_table_scrub, otu_table_strict, file = "analyses/environmental_sequencing/pacbio_env/unoise/counts/otu_tables.RData")

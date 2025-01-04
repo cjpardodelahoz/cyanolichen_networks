@@ -151,6 +151,7 @@ second_batch_barcoded %>%
 # Compile barcode data from all batches
 all_batches_barcoded <- bind_rows(first_batch_barcoded, second_batch_barcoded, third_batch_barcoded,
   .id = "sequencing_batch") %>%
+  mutate(plate_id = paste(plate_id, sequencing_batch, sep = "_")) %>%
   select(-c(plate_col, plate_row))
 # Join sequencing and env metadata
 env_top_metadata <- env_dna_codes_top %>%

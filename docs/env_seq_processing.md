@@ -35,7 +35,7 @@ multiqc analyses/environmental_sequencing/pacbio_env/qc/fastqc \
 - FastQC failed on samples s1_3t, s10_23t, and s1_12t.
 - NanoPlot failed on samples
 
-## Read filtering and denoising to get ASVs
+## Reads to OTU table
 
 Trim the primers, orient the reads forward and add the sample names to the sequence headers:
 ```sh
@@ -49,7 +49,20 @@ Call ASVs using UNOISE3 implemente in Vsearch:
 sbatch scripts/environmental_sequencing/pacbio_env/unoise_asv_call.sh
 ```
 
-## Extracting Nostocales reads
+Remove contamination from OTU table:
+
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/decontaminate_batch123.R
+```
+
+Normalize otu_tables and plot rarefaction curves
+
+```sh
+sbatch scripts/environmental_sequencing/pacbio_env/normalize_otu_tables.R
+```
+
+
+Extracting Nostocales reads
 
 ```sh
 sbatch scripts/environmental_sequencing/pacbio_env/kraken_pipeline_unoise.sh
@@ -79,7 +92,9 @@ mkdir -p analyses/lichen_sequencing/pacbio_lichen
 Rscript scripts/lichen_sequencing/pacbio_lichen/prep_for_lichen_16s_curation.R
 ```
 
-Then, we manually curated the lichen 16S data using (i) the results of the BLASTn seach against the *Nostoc* 16S reference sequences, (ii) the [results of EPA placement of all Nostocales ASVs on the T-BAS tree of *Nostoc*](https://tbas.cifr.ncsu.edu/tbas2_3/genetree.php?runnumber=PLU76GM7), and (iii) the *Nostoc* IDs assigned with *rbcLX*. All libraries had 16S reads that mapped to many Nostocales ASVs. This is expected because the DNA was extracted from specimens that were not surface sterilized. However, with one exception, the most abundant ASV in each sample corresponded to the taxon determined with *rbcLX*. In addition, the top ASV in each library was typically one or two orders of magnitude more abundant than the rest. This suggests that the other mappings correspond to expected epiphytic *Nostoc* or low-level contamination.
+Then, we manually curated the lichen 16S data using (i) the results of the BLASTn seach against the *Nostoc* 16S reference sequences, (ii) the [results of EPA placement of all Nostocales ASVs on the T-BAS tree of *Nostoc*](https://tbas.cifr.ncsu.edu/tbas2_3/genetree.php?runnumber=PLU76GM7), and (iii) the *Nostoc* IDs assigned with *rbcLX*. All libraries had 16S reads that mapped to many Nostocales ASVs. This is expected because the DNA was extracted from specimens that were not surface sterilized. However, with one exception, the most abundant ASV in each sample corresponded to the taxon determined with *rbcLX*. In addition, the top ASV in each library was typically one or two orders of magnitude more abundant than the rest. This suggests that the other mappings correspond to expected epiphytic *Nostoc* or low-level contamination. The curated IDs are in `analyses/lichen_sequencing/pacbio_lichen/selected_specimens_id_table_curated.csv`
+
+*Note*: We retrieved a newick version of the T-BAS tree with the placement and stored it in `analyses/environmental_sequencing/pacbio_env/unoise/taxonomy/tbas/tbas_nostocales_asvs.tree`.
 
 ## All-to-all BLASTn of Nostocales ASVs
 
