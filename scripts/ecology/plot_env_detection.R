@@ -10,6 +10,7 @@ library(treeio)
 library(ggtree)
 library(ggnewscale)
 library(ggtreeExtra)
+library(aplot)
 
 ########## SUBSET PLACEMENT TREE ##########
 
@@ -46,6 +47,9 @@ rm(physeq_strict, physeq_strict_normalized, physeq_strict_quadrant_type, physeq_
   physeq_scrub_quadrant_type_normalized, physeq_scrub_plot_type_normalized, physeq_scrub_site_type_normalized, physeq_scrub_site_normalized,
   physeq_scrub_binary, physeq_scrub_binary_quadrant_type, physeq_scrub_binary_plot_type, physeq_scrub_binary_site_type
   )
+
+# Load module assignments
+load("analyses/ecology/peltigera_module_assignments.RData")
 
 # Sort ASVs for trimming
 
@@ -94,6 +98,16 @@ genome_asvs <- genome_asv_key_unique$query
 #genomes_matching_asvs <- genome_asv_key_unique$subject %>%
 #    unique()
 
+# Prep module data for plotting
+
+# Get module data for the ASVs
+module_key <- lichenized_asv_table %>%
+    left_join(nostoc_module_assignments, by = "nostoc_otu") %>%
+    filter(!is.na(module)) %>%
+    mutate(module = factor(as.character(module))) %>%
+    select(asv_16s_first, module) %>%
+    distinct(asv_16s_first, .keep_all = T)
+
 # Prep OTU table for trimming an plotting 
 
 # Keep only lichenized ASVs in the OTU tables
@@ -109,7 +123,8 @@ otu_table_scrub <- otu_table(physeq_scrub_binary_site)
 env_detection <- t(otu_table_scrub) %>%
     apply(., 2, function(x) ifelse(x > 0, "present", "absent")) %>%
     as.data.frame() %>%
-    rownames_to_column(var = "tip.label") #%>%
+    rownames_to_column(var = "tip.label") %>%
+    left_join(module_key, by = c("tip.label" = "asv_16s_first")) #%>%
     # In the asv column, replace the asvs that are in the genome_asv_key with the genome name (subject column)
     #mutate(tip.label = ifelse(tip.label %in% genome_asv_key_unique$query,
     #    genome_asv_key_unique$subject[match(tip.label, genome_asv_key_unique$query)],
@@ -128,88 +143,58 @@ tbas_tree_inset <- drop.tip(tbas_tree, c(non_lichenized_asvs, genome_asvs))
 ggtree(tbas_tree_inset)
 ggsave("documents/plots/tree_inset.pdf", unit = "cm", width = 10, height = 20)
 
+########## GVP AND SCY GENE DATA FOR HEATMAPS ##########
+
+# Mock gvp and scy data
+gvp_data <- env_detection %>%
+    select(tip.label) %>%
+    mutate(gvpA = sample(0:3, nrow(.), replace = T),
+           gvpC = sample(0:3, nrow(.), replace = T))
+scy_data <- env_detection %>%
+    select(tip.label) %>%
+    mutate(scyA = sample(0:3, nrow(.), replace = T),
+           scyC = sample(0:3, nrow(.), replace = T))
+
+# Reshape gvp and scy data to long format for plotting
+gvp_data_long <- gvp_data %>%
+    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies")
+scy_data_long <- scy_data %>%
+    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies")
+
 ########## PLOT TREE WITH ENV DETECTION ##########
 
-# PLot the tbas trimmed tree with tip labels aligned and use geom_fruit and ggnewscale to map the otu_table_scrub data to the tree. The otu_table_scrub data is the presence/absence of the ASVs in different sites (s1-s15).
-base_tree_plot <- ggtree(tbas_tree_trimmed) %<+% env_detection
-base_tree_plot +
-    #geom_tiplab(aes(label = label), align = F, size = 2) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s1),
-             offset = 0.02) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s2),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s3),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s4),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s5),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s6),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s7),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s8),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s9),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s10),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s11),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s12),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s13),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s14),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    new_scale(new_aes = "shape") +
-    geom_fruit(geom = geom_point, 
-             mapping = aes(y = label, shape = s15),
-             offset = 0.03) +
-    scale_shape_manual(values = c(46, 19)) +
-    theme(legend.position = "none")
- 
+# Define custom colors for the modules
+module_colors <- c("1" = "#8a708a", "2" = "#7e937b", "3" = "#3277b0", "4" = "#be8551", "5" = "gray70", "6" = "gray20")
 
-ggsave("tree.pdf", width = 7, height = 10)
+# Define the order of the sites
+sites <- c("s5", "s4", "s8", "s3", "s6", "s13", "s14", "s2", "s15", "s7", "s1", "s12", "s11", "s10", "s9")
+
+# Plot the tbas trimmed tree with the environmental detection
+# Sites are ordered by NR and elevation, except in the grassland
+# RM, FH, BO, PK, and GR
+# s5, s4, s8, s3, s6, s13, s14, s2, s15, s7, s1, s12, s11, s10, s9
+base_tree_plot <- ggtree(tbas_tree_trimmed) %<+% env_detection
+tree_env_detection_plot <- base_tree_plot #+
+    #geom_tiplab(aes(label = label), align = T, offset = 0.03)
+for (site in sites) {
+    tree_env_detection_plot <- tree_env_detection_plot +
+        new_scale(new_aes = "shape") +
+        new_scale_color() +
+        geom_fruit(geom = geom_point, 
+                             mapping = aes_string(y = "label", shape = site, color = "module"),
+                             offset = 0.03, size = 3) +
+        scale_shape_manual(values = c(46, 19)) +
+        scale_color_manual(values = module_colors)
+}
+tree_env_detection_plot <- tree_env_detection_plot + theme(legend.position = "none")
+
+# Add a heatmap of the GVP and SCY genes to the right of the tree
+gene_copy_colors <- c("0" = "#fbf3e5", "1" = "#ead096", "2" = "#ad9a70", "3" = "#74694d")
+tree_env_detection_gvp_plot <- tree_env_detection_plot +
+    geom_fruit(data = gvp_data_long, geom = geom_tile, 
+        mapping = aes(x = gene, y = tip.label, fill = as.character(copies)), width = 2.1, offset = 0.08) +
+    geom_fruit(data = scy_data_long, geom = geom_tile, 
+        mapping = aes(x = gene, y = tip.label, fill = as.character(copies)), width = 2.1, offset = 0.11) +
+    scale_fill_manual(values = gene_copy_colors)
+
+ggsave("tree.pdf", width = 10, height = 10)
