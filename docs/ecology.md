@@ -25,6 +25,8 @@ Evolutionary consequences
     - Phylogroups V and XLII
     - Keep an eye out for malacea 2 vs malacea 5
 
+
+Note for env abundance: rarefy and proportions to visualize relative abundances and check if sufficient depth was acquired. Consider count normalization for differential abundance analyses.
 ## The regional dataset
 
 Include here a reference to the data clean-up:
@@ -143,6 +145,14 @@ Rscript scripts/ecology/plot_section_trees.R
 ```
 
 ## Vertical vs. Horizontal transmission
+
+### Plot 16S placement with detection on environment/thalli samples and comparative genomics on motility and scytonemin
+
+The hypothesis that interactions are largely driven by the effect of environmental variation on symbiont cooccurrence assumes that horizontal transmission of symbionts is common. For horizontal transmission to occur, *Nostoc* must be able to survive in non-lichenized states. Here I plot the phylogenetic placement of 16S ASVs of lichenized *Nostoc* (which include the great majority of *Nostoc* lineages in the regional dataset as well), and their detection in thalli and environmental samples across the 15 sites. XX of these 16S ASVs are identical to the 16S from genomes we have sequenced before. Therefore, I also mapped the number of copies of genes for hormogonia development (gvp) and scytonenim (scy) biosynthesis because these traits could explain why phylogroups such as VIIa are almost never found in the environment while other common lineages are.
+
+```sh
+Rscript scripts/ecology/plot_env_detection.R
+```
 
 ### Inference of clonality in *Peltigera* from ITS and *rbcLX* sequence data
 

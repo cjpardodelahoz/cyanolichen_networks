@@ -98,16 +98,6 @@ genome_asvs <- genome_asv_key_unique$query
 #genomes_matching_asvs <- genome_asv_key_unique$subject %>%
 #    unique()
 
-# Prep module data for plotting
-
-# Get module data for the ASVs
-module_key <- lichenized_asv_table %>%
-    left_join(nostoc_module_assignments, by = "nostoc_otu") %>%
-    filter(!is.na(module)) %>%
-    mutate(module = factor(as.character(module))) %>%
-    select(asv_16s_first, module) %>%
-    distinct(asv_16s_first, .keep_all = T)
-
 # Prep OTU table for trimming an plotting 
 
 # Keep only lichenized ASVs in the OTU tables
@@ -117,18 +107,6 @@ physeq_scrub_binary_site <- prune_taxa(lichenized_asvs, physeq_scrub_binary_site
 # asvs are in lichenized_asvs but not in the colnames of the OTU tables
 asvs_missing_strict <- lichenized_asvs[!lichenized_asvs %in% colnames(otu_table(physeq_strict_binary_site))]
 asvs_missing_scrub <- lichenized_asvs[!lichenized_asvs %in% colnames(otu_table(physeq_scrub_binary_site))]
-
-# Convert the scrub OTU table to dataframe and transpose it
-otu_table_scrub <- otu_table(physeq_scrub_binary_site)
-env_detection <- t(otu_table_scrub) %>%
-    apply(., 2, function(x) ifelse(x > 0, "present", "absent")) %>%
-    as.data.frame() %>%
-    rownames_to_column(var = "tip.label") %>%
-    left_join(module_key, by = c("tip.label" = "asv_16s_first")) #%>%
-    # In the asv column, replace the asvs that are in the genome_asv_key with the genome name (subject column)
-    #mutate(tip.label = ifelse(tip.label %in% genome_asv_key_unique$query,
-    #    genome_asv_key_unique$subject[match(tip.label, genome_asv_key_unique$query)],
-    #    tip.label))
 
 # Trim the tree
 
@@ -142,6 +120,47 @@ tbas_tree_inset <- drop.tip(tbas_tree, c(non_lichenized_asvs, genome_asvs))
 # Plot and save the inset tree plot
 ggtree(tbas_tree_inset)
 ggsave("documents/plots/tree_inset.pdf", unit = "cm", width = 10, height = 20)
+
+########## PREP FULL DETECTION TABLE ##########
+
+# Prep module data for plotting
+
+# Load pelt detection table
+load("analyses/lichen_sequencing/multiscale/pelt_detection.RData")
+
+# Get module data for the ASVs
+module_key <- lichenized_asv_table %>%
+    left_join(nostoc_module_assignments, by = "nostoc_otu") %>%
+    filter(!is.na(module)) %>%
+    mutate(module = factor(as.character(module))) %>%
+    select(asv_16s_first, module) %>%
+    distinct(asv_16s_first, .keep_all = T)
+
+# Convert the scrub OTU table to dataframe and transpose it
+otu_table_scrub <- otu_table(physeq_scrub_binary_site)
+env_detection <- t(otu_table_scrub) %>%
+    apply(., 2, function(x) ifelse(x > 0, "present", "absent")) %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "tip.label") %>%
+    left_join(module_key, by = c("tip.label" = "asv_16s_first")) #%>%
+    # In the asv column, replace the asvs that are in the genome_asv_key with the genome name (subject column)
+    #mutate(tip.label = ifelse(tip.label %in% genome_asv_key_unique$query,
+    #    genome_asv_key_unique$subject[match(tip.label, genome_asv_key_unique$query)],
+    #    tip.label))
+
+# Full detection table considering both environmental and thallus detection
+full_detection <- env_detection %>%
+    pivot_longer(cols = starts_with("s"), names_to = "site", values_to = "env_status") %>%
+    left_join(pelt_detection %>% pivot_longer(cols = starts_with("s"), names_to = "site", values_to = "pelt_status"), 
+              by = c("tip.label", "site")) %>%
+    mutate(status = case_when(
+        env_status == "present" & pelt_status == "present" ~ "both",
+        env_status == "present" & pelt_status == "absent" ~ "env",
+        env_status == "absent" & pelt_status == "present" ~ "pelt",
+        TRUE ~ "absent"
+    )) %>%
+    select(-env_status, -pelt_status) %>%
+    pivot_wider(names_from = site, values_from = status)
 
 ########## GVP AND SCY GENE DATA FOR HEATMAPS ##########
 
@@ -161,7 +180,10 @@ gvp_data_long <- gvp_data %>%
 scy_data_long <- scy_data %>%
     pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies")
 
-########## PLOT TREE WITH ENV DETECTION ##########
+########## PLOT TREE WITH ENV AND PELT DETECTION ##########
+
+# Define shapes for detection
+detection_sahpes <- c("absent" = 46, "env" = 1, "pelt" = 24, "both" = 19)
 
 # Define custom colors for the modules
 module_colors <- c("1" = "#8a708a", "2" = "#7e937b", "3" = "#3277b0", "4" = "#be8551", "5" = "gray70", "6" = "gray20")
@@ -173,7 +195,7 @@ sites <- c("s5", "s4", "s8", "s3", "s6", "s13", "s14", "s2", "s15", "s7", "s1", 
 # Sites are ordered by NR and elevation, except in the grassland
 # RM, FH, BO, PK, and GR
 # s5, s4, s8, s3, s6, s13, s14, s2, s15, s7, s1, s12, s11, s10, s9
-base_tree_plot <- ggtree(tbas_tree_trimmed) %<+% env_detection
+base_tree_plot <- ggtree(tbas_tree_trimmed) %<+% full_detection
 tree_env_detection_plot <- base_tree_plot #+
     #geom_tiplab(aes(label = label), align = T, offset = 0.03)
 for (site in sites) {
@@ -183,7 +205,7 @@ for (site in sites) {
         geom_fruit(geom = geom_point, 
                              mapping = aes_string(y = "label", shape = site, color = "module"),
                              offset = 0.03, size = 3) +
-        scale_shape_manual(values = c(46, 19)) +
+        scale_shape_manual(values = detection_sahpes) +
         scale_color_manual(values = module_colors)
 }
 tree_env_detection_plot <- tree_env_detection_plot + theme(legend.position = "none")
@@ -197,4 +219,4 @@ tree_env_detection_gvp_plot <- tree_env_detection_plot +
         mapping = aes(x = gene, y = tip.label, fill = as.character(copies)), width = 2.1, offset = 0.11) +
     scale_fill_manual(values = gene_copy_colors)
 
-ggsave("tree.pdf", width = 10, height = 10)
+ggsave("documents/plots/detection_tree.pdf", width = 14, height = 10)
