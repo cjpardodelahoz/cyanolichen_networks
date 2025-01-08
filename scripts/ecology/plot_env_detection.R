@@ -10,7 +10,6 @@ library(treeio)
 library(ggtree)
 library(ggnewscale)
 library(ggtreeExtra)
-library(aplot)
 
 ########## SUBSET PLACEMENT TREE ##########
 
@@ -115,10 +114,25 @@ asvs_missing_scrub <- lichenized_asvs[!lichenized_asvs %in% colnames(otu_table(p
 tbas_tree_trimmed <- keep.tip(tbas_tree, c(lichenized_asvs[!lichenized_asvs %in% asvs_missing_scrub]))
 
 # Trimmed tree with full reference for inset
-tbas_tree_inset <- drop.tip(tbas_tree, c(non_lichenized_asvs, genome_asvs))
+tbas_tree_inset <- drop.tip(tbas_tree, c(non_lichenized_asvs))
 
-# Plot and save the inset tree plot
-ggtree(tbas_tree_inset)
+# Plot inset tree highlighting branches with lichenized ASVs for inset
+
+# Convert tip labels to node indices
+tips_to_color <- match(tbas_tree_trimmed$tip.label, tbas_tree_inset$tip.label)
+
+# Identify the branches to be colored
+nodes_to_color <- unique(unlist(lapply(combn(tips_to_color, 2, simplify = FALSE), function(pair) {
+  nodepath(tbas_tree_inset, from = pair[1], to = pair[2])
+})))
+
+# Plot the tree with colored branches
+inset_plot <- ggtree(tbas_tree_inset) +
+    geom_tree(aes(color = ifelse(node %in% nodes_to_color, "red", "black"))) +
+    scale_color_manual(values = c("red" = "red", "black" = "gray60")) +
+    theme(legend.position = "none")
+
+# Save the inset plot
 ggsave("documents/plots/tree_inset.pdf", unit = "cm", width = 10, height = 20)
 
 ########## PREP FULL DETECTION TABLE ##########
@@ -152,7 +166,7 @@ env_detection <- t(otu_table_scrub) %>%
 full_detection <- env_detection %>%
     pivot_longer(cols = starts_with("s"), names_to = "site", values_to = "env_status") %>%
     left_join(pelt_detection %>% pivot_longer(cols = starts_with("s"), names_to = "site", values_to = "pelt_status"), 
-              by = c("tip.label", "site")) %>%
+              by = c("tip.label" = "asv_16s", "site")) %>%
     mutate(status = case_when(
         env_status == "present" & pelt_status == "present" ~ "both",
         env_status == "present" & pelt_status == "absent" ~ "env",
@@ -196,8 +210,8 @@ sites <- c("s5", "s4", "s8", "s3", "s6", "s13", "s14", "s2", "s15", "s7", "s1", 
 # RM, FH, BO, PK, and GR
 # s5, s4, s8, s3, s6, s13, s14, s2, s15, s7, s1, s12, s11, s10, s9
 base_tree_plot <- ggtree(tbas_tree_trimmed) %<+% full_detection
-tree_env_detection_plot <- base_tree_plot #+
-    #geom_tiplab(aes(label = label), align = T, offset = 0.03)
+tree_env_detection_plot <- base_tree_plot +
+    geom_treescale()
 for (site in sites) {
     tree_env_detection_plot <- tree_env_detection_plot +
         new_scale(new_aes = "shape") +
@@ -220,3 +234,8 @@ tree_env_detection_gvp_plot <- tree_env_detection_plot +
     scale_fill_manual(values = gene_copy_colors)
 
 ggsave("documents/plots/detection_tree.pdf", width = 14, height = 10)
+
+# Print version of the tree with aligned tip labels for Fig.
+tree_env_detection_gvp_plot +
+    geom_tiplab(align = T)
+ggsave("documents/plots/detection_tree_aligned_labels.pdf", width = 14, height = 10)
