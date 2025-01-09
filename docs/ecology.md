@@ -154,12 +154,12 @@ The hypothesis that interactions are largely driven by the effect of environment
 Rscript scripts/ecology/plot_env_detection.R
 ```
 
-### Inference of clonality in *Peltigera* from ITS and *rbcLX* sequence data
+### Inference of photobiont transmission mode in *Peltigera* from ITS and *rbcLX* sequence data
 
+We can use the ITS-*rbcLX* haplotype combinations in the specimens as a proxy for their clonality: if two specimens have an identical combianation, we consider them clonal; if the combination is different, we assume there was an event of horizontal photobiont transmission. We used this principle to quantify clonality across *Peltigera* species at both local and regional scales. Specifically, we calculated the maximum haplotype combination proportion (MHP) for each species. A value of 1 means that all specimens of that species have the same haplotype combinations and are likely clonal. MHP decreases to 1/n, where n is the number of specimens, when every single specimen has a different combination, likely because horizontal photobiont transmission is common. 
+
+At the local scale, the calculation is simply max. haplotype frequency/n. However, if we do the same at the regional scale, the result could be biased by situations where a species is very common and clonal in a few sites. Therefore, I generated 1000 pseudoreplicates of the regional scale populations where I randomly sampled a single specimen of a given species from every site where it was found. Thus, all pseudoreplicates included the same number of specimens, i.e., equal to the number of sites where the species was found. Then, I calculated MHP independently for each pseudoreplicate. Finally, I plotted both the distribution of MHP at the regional scale and the local MHP for species with more than 10 specimens at a site in the local dataset.
 
 ```sh
 Rscript scripts/ecology/infer_clones.R
 ```
-
-
-
