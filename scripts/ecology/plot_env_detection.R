@@ -129,7 +129,7 @@ nodes_to_color <- unique(unlist(lapply(combn(tips_to_color, 2, simplify = FALSE)
 # Plot the tree with colored branches
 inset_plot <- ggtree(tbas_tree_inset) +
     geom_tree(aes(color = ifelse(node %in% nodes_to_color, "red", "black"))) +
-    scale_color_manual(values = c("red" = "red", "black" = "gray60")) +
+    scale_color_manual(values = c("red" = "black", "black" = "gray75")) +
     theme(legend.position = "none")
 
 # Save the inset plot
