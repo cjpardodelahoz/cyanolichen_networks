@@ -178,21 +178,39 @@ full_detection <- env_detection %>%
 
 ########## GVP AND SCY GENE DATA FOR HEATMAPS ##########
 
-# Mock gvp and scy data
-gvp_data <- env_detection %>%
-    select(tip.label) %>%
-    mutate(gvpA = sample(0:3, nrow(.), replace = T),
-           gvpC = sample(0:3, nrow(.), replace = T))
-scy_data <- env_detection %>%
-    select(tip.label) %>%
-    mutate(scyA = sample(0:3, nrow(.), replace = T),
-           scyC = sample(0:3, nrow(.), replace = T))
+# Target genes
+scy_genes <- c("tyrA", "scyB", "scyA", "scyE")
+gvp_genes <- c("gvpA", "gvpC")
+
+# Load gene content data and select target genes
+gene_content_data <- read_csv("data/tables/gene_content.csv") %>%
+    select(genome, all_of(scy_genes), all_of(gvp_genes))
+
+# Join the gene content data with the genome ID key
+gvp_data <- genome_id_key %>%
+    mutate(genome = str_remove(genome_id, ".fa")) %>%
+    left_join(gene_content_data, by = c("genome")) %>%
+    select(`Taxon name`, all_of(gvp_genes)) %>%
+    left_join(genome_asv_key_unique, by = c("Taxon name" = "subject")) %>%
+    select(query, all_of(gvp_genes)) %>%
+    filter(query %in% tbas_tree_trimmed$tip.label) %>%
+    rename(tip.label = query)
+scy_data <- genome_id_key %>%
+    mutate(genome = str_remove(genome_id, ".fa")) %>%
+    left_join(gene_content_data, by = c("genome")) %>%
+    select(`Taxon name`, all_of(scy_genes)) %>%
+    left_join(genome_asv_key_unique, by = c("Taxon name" = "subject")) %>%
+    select(query, all_of(scy_genes)) %>%
+    filter(query %in% tbas_tree_trimmed$tip.label) %>%
+    rename(tip.label = query)
 
 # Reshape gvp and scy data to long format for plotting
 gvp_data_long <- gvp_data %>%
-    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies")
+    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies") %>%
+    mutate(gene = factor(gene, levels = gvp_genes))
 scy_data_long <- scy_data %>%
-    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies")
+    pivot_longer(cols = -tip.label, names_to = "gene", values_to = "copies") %>%
+    mutate(gene = factor(gene, levels = scy_genes))
 
 ########## PLOT TREE WITH ENV AND PELT DETECTION ##########
 
