@@ -27,7 +27,7 @@ sbatch scripts/lichen_sequencing/ont_lichen/nanoplot_read_qc.sh
 Prepare the barcode files for demultiplexing the ONT reads:
 
 ```sh
-Rscript scripts/lichen_sequencing/ont_lichen/sort_lichen_barcodes.R
+Rscript scripts/lichen_sequencing/ont_lichen/sort_lichen_barcodes.R # This requires a manually-modified version of the voucher to be in "analyses/lichen_sequencing/ont_lichen/id/lichen_voucher_jm.csv"
 ```
 
 Demultiplex the reads searching separately for ITS and *rbcLX* and looking for reads in both orientations:
@@ -141,4 +141,4 @@ I matched the 16S ASVs to the revised *rbcLX* haplotypes and extrapolated the co
 Rscript scripts/lichen_sequencing/multiscale/match_local_to_haplotypes_asvs.R
 ```
 
-After this, we had correspondence between *rbcLX* IDs and 16S ASVs for 2253 out 2318 *Nostoc*. This script will also print a revised version of the voucher table for the local dataset (`analyses/lichen_sequencing/multiscale/pelt_detection.RData`), which includes the matched ASVs and the revised ITS and *rbcLX* haplotypes. I used this version of the voucher table for the detection plot. Note that there were 5 cases where a single *rbcLX* haplotype matched with two different 16S ASVs. Nevertheless, the matching ASVs belonged to the same clade as the *rbcLX* haplotype.
+After this, we had correspondence between *rbcLX* IDs and 16S ASVs for 2253 out 2318 *Nostoc*. This script will also print a revised version of the voucher table for the local dataset, which includes the matched ASVs and the revised ITS and *rbcLX* haplotypes, as well as the site and apothecia scoring info. It also generates an R dataset (`analyses/lichen_sequencing/multiscale/pelt_detection.RData`) for the detection plot. Note that there were 5 cases where a single *rbcLX* haplotype matched with two different 16S ASVs. Nevertheless, the matching ASVs belonged to the same clade as the *rbcLX* haplotype.
