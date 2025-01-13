@@ -87,7 +87,7 @@ arctic_dna_codes <- c(paste("PL", seq(751, 796, 1), sep = ""))
 diane_dna_codes <- c(paste("PA", seq(4101, 4117, 1), sep = ""))
 
 # Sort DNA codes into the PAP sets
-lichen_dna_codes <- read_csv("documents/tables/lichen_voucher_jm.csv") %>% # Note that this table does not include PA1937 even thoug it is included in the range for site 14
+lichen_dna_codes <- read_csv("analyses/lichen_sequencing/ont_lichen/id/lichen_voucher_jm.csv") %>% # Note that this table does not include PA1937 even thoug it is included in the range for site 14
     select(dna_code) %>%
     add_row(dna_code = empty_wells) %>%
     add_row(dna_code = diane_dna_codes) %>%

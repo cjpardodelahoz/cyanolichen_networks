@@ -1,5 +1,14 @@
 # Sequencing of nrITS and *rbcLX* with ONT
 
+## Assign DNA codes to lichen samples
+
+We start by assigning DNA codes to each of the lichen samples from the local dataset. This will be the starting point for ID curation and ultimately the voucher table of the local dataset
+
+```sh
+mkdir -p analyses/lichen_sequencing/ont_lichen/id
+Rscript analyses/lichen_sequencing/ont_lichen/assign_lichen_dna_codes.R
+```
+
 ## Read QC, demultiplexing and trimming of primers and barcodes
 
 Make a working copy and concatenate the reads for each pool:
@@ -103,7 +112,6 @@ sbatch scripts/lichen_sequencing/ont_lichen/collapse_and_blast_rbclx.sh
 Then we added the IDs to the voucher table for manual curation.
 
 ```sh
-# TO-DO: Rerun using updated data s1c
 Rscript scripts/lichen_sequencing/ont_lichen/ids_to_voucher.R
 ```
 
