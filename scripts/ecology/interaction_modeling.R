@@ -354,9 +354,9 @@ module_colors <- c("1" = "#8a708a", "2" = "#7e937b", "3" = "#3277b0", "4" = "#be
 
 # Define the order of pairs based on delta_aic_plot_MAT
 pair_order <- delta_aic_table_MAT %>%
-  arrange(delta_aic) %>%
-  mutate(pair = paste(mycobiont, nostoc)) %>%
-  pull(pair)
+    arrange(desc(mycobiont), desc(nostoc)) %>%
+    mutate(pair = paste(mycobiont, nostoc)) %>%
+    pull(pair)
 
 # Add the pair column to all tables
 delta_aic_table_MAT <- delta_aic_table_MAT %>%
