@@ -540,6 +540,33 @@ ggsave(cooccurring_sites_hist, filename = "documents/plots/cooccurring_sites_his
     width = 12, height = 9, units = "cm")
 
 
+##### PLOT COOCCURRENCE VS INTERACTIONS #####
+
+# Pair data for pairs that cooccur at least 10 times
+coo_vs_inter_data <- pairs_data %>%
+    group_by(IDi, IDj) %>%
+    summarise(coo = sum(Xij),
+                inter = sum(Lij)) %>%
+    left_join(peltigera_module_assignments, by = c("IDi" = "mycobiont_molecular_id")) %>%
+    left_join(nostoc_module_assignments, by = c("IDj" = "nostoc_otu")) %>%
+    mutate(same_module = module.x == module.y)
+
+# Make a plot of inter vs coo with geom point witht the shape 18 and color by same_module (use gray50 if TRUE and #892b46 if FALSE) with alpha 0.5
+coo_vs_inter_plot <- coo_vs_inter_data %>%
+    ggplot(aes(x = coo, y = inter, color = same_module)) +
+    geom_point(shape = 16, alpha = 0.6, size = 2) +
+    scale_color_manual(values = c("TRUE" = "#892b46", "FALSE" = "gray50"), guide = "none") +
+    labs(x = "No. of sites where symbionts cooccur", y = "No. of sites where symbionts interact") +
+    # Add a one to one line
+    geom_abline(intercept = 0, slope = 1, linetype = "dotted", color = "black", linewidth = 0.35) +
+    # Add a horizontal line at y = 0.99
+    geom_hline(yintercept = 0.5, linetype = "dotted", color = "black", linewidth = 0.35) +
+    custom_theme
+
+# Save the plot as a PDF
+ggsave(coo_vs_inter_plot, filename = "documents/plots/coo_vs_inter_plot.pdf",
+    width = 12, height = 9, units = "cm")
+
 ##### EXAMPLE PAIR #####
 
 # Find the nb of links per pair
