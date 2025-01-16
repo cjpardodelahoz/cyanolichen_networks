@@ -58,9 +58,10 @@ custom_theme <- theme(
 # Plot for Peltigera
 peltigera_plot <- ggplot(peltigera_summary, aes(x = n_sites, y = n_partners)) +
   geom_point(aes(color = color), shape = 17) +
-  geom_smooth(method = "lm", se = FALSE, color = "gray50", linetype = "dashed", size = 0.5) +  # Add dashed trend line
-  scale_y_continuous(breaks = seq(0, 10, by = 2)) +  # Set y scale breaks
+  geom_smooth(method = "lm", se = FALSE, color = "gray50", linetype = "dashed", size = 0.5, fullrange = TRUE) +  # Add dashed trend line
   scale_color_identity() +  # Use the color column for point colors
+  scale_x_continuous(limits = c(0,205)) +
+  scale_y_continuous(limits = c(0,40)) +
   labs(x = "Number of sites",
        y = "Number of partners") +
   custom_theme
@@ -68,8 +69,10 @@ peltigera_plot <- ggplot(peltigera_summary, aes(x = n_sites, y = n_partners)) +
 # Plot for Nostoc
 nostoc_plot <- ggplot(nostoc_summary, aes(x = n_sites, y = n_partners)) +
   geom_point(aes(color = color)) +
-  geom_smooth(method = "lm", se = FALSE, color = "gray50", linetype = "dashed", size = 0.5) +  # Add dashed trend line
+  geom_smooth(method = "lm", se = FALSE, color = "gray50", linetype = "dashed", size = 0.5, fullrange = TRUE) +  # Add dashed trend line with full range
   scale_color_identity() +  # Use the color column for point colors
+  scale_x_continuous(limits = c(0,205)) +
+  scale_y_continuous(limits = c(0,40)) +
   labs(x = "Number of sites",
        y = "Number of partners") +
   custom_theme
@@ -81,4 +84,3 @@ ggsave("documents/plots/pelt_occurrence_vs_specif.pdf",
 ggsave("documents/plots/nostoc_occurrence_vs_specif.pdf",
          plot = nostoc_plot,
          width = 8, height = 6, units = "cm")
-
